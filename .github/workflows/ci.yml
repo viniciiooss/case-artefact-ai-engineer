@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.3"
+          enable-cache: true
+      - name: Instalar dependências do lock e pacote wheel
+        run: uv sync --locked --no-editable
+      - name: Lint
+        run: uv run --no-sync ruff check .
+      - name: Formatação
+        run: uv run --no-sync ruff format --check .
+      - name: Testes
+        run: uv run --no-sync pytest
+      - name: Avaliação determinística HTTP
+        run: uv run --no-sync python scripts/evaluate.py --report var/evaluation.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evaluation-python-${{ matrix.python-version }}
+          path: var/evaluation.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir imagem sem publicação
+        run: docker build --tag emporio:ci .
