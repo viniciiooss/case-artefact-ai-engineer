@@ -20,7 +20,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 | Contêiner em execução | UID 10001, healthcheck **healthy**, leitura/gravação e rotas verificadas |
 | Revisão independente | Achados funcionais corrigidos; regressões finais aprovadas |
 | Langfuse real | Autenticação confirmada, sem envio de conteúdo de conversas |
-| OpenRouter real | `GET /api/v1/key` retornou **HTTP 401** para a chave local; geração não executada |
+| OpenRouter real | Nova chave fornecida pelo usuário autenticada com **HTTP 200** em `GET /api/v1/key`; geração não executada |
 
 ## Reproduzir as verificações automatizadas
 
@@ -75,8 +75,9 @@ e preço de produto também tem teste, assim como sinônimos legítimos de statu
 
 **Não foram executadas gerações com OpenAI, OpenRouter ou servidor Ollama reais.** Após
 o pedido de ativação, as chaves necessárias foram copiadas para o `.env` local ignorado,
-com permissão 0600. O Langfuse autenticou; a chave OpenRouter retornou HTTP 401 e precisa
-ser atualizada. Os testes usam chaves fictícias e transporte controlado. Os resultados
+com permissão 0600. O Langfuse autenticou. A chave OpenRouter original retornou HTTP 401;
+após a substituição pelo usuário, a nova chave autenticou com HTTP 200. Os testes usam
+chaves fictícias e transporte controlado. Os resultados
 não medem qualidade de linguagem livre,
 resistência universal a prompt injection, adequação jurídica das políticas ou segurança de
 produção. A defesa de resposta é conservadora e heurística; não substitui avaliação real.
@@ -123,7 +124,8 @@ Os 15 novos testes verificam o caminho real dos SDKs com transporte/exportação
 
 Os quatro casos revisados em `evals/llm_cases.json` têm referências próprias da Empório.
 O comando `scripts/evaluate_llm.py` está pronto, mas não há relatório de notas reais nesta
-entrega. A chave OpenRouter atual não autenticou; `var/deepeval-live.json` não foi gerado.
+entrega. A nova chave OpenRouter autenticou; a execução paga aguarda autorização explícita.
+`var/deepeval-live.json` não foi gerado.
 Não houve consumo de créditos nos testes descritos. A autenticação Langfuse foi conferida
 separadamente; o recebimento de uma conversa real no serviço ainda depende da execução real.
 

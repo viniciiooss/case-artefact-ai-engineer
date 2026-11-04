@@ -20,6 +20,8 @@
   do texto bruto do provedor, incluindo códigos desconhecidos.
 - Pedido de ativação e qualidade: `.env` local 0600 configurado; credenciais Langfuse autenticadas,
   chave OpenRouter recusada com HTTP 401. Usuário informado para atualizar a variável local.
+- Usuário substituiu a chave OpenRouter: autenticação confirmada com HTTP 200 em GET /key,
+  servidor recarregado e healthcheck local OK. Geração e lote pago ainda não executados.
 - Langfuse e DeepEval adicionados como extras independentes; duas métricas G-Eval em português,
   quatro casos próprios e relatório local, sem juiz no atendimento. SDKs testados offline.
 - Revisão reproduziu uploads de mídia antes do masking e notas de juiz fora da faixa. Ambos

@@ -16,8 +16,9 @@ como base; a avaliação com juiz roda em comando separado.
 - [ ] Ativação local: criar `.env` com permissão 0600 usando somente as credenciais
   necessárias do checkout Yaitec, sem imprimir valores nem alterar o projeto original.
   Verificar autenticação e executar uma amostra real pequena, com geração e juiz.
-  Estado: `.env` criado e Langfuse autenticado; OpenRouter retornou 401. Execução real
-  pendente de chave válida e autorização da execução externa.
+  Estado: `.env` criado e Langfuse autenticado; nova chave OpenRouter autenticada com
+  HTTP 200 após substituição pelo usuário. Servidor recarregado. Execução real pendente
+  de autorização para envio dos quatro casos e consumo de créditos.
 - [x] Entrega: atualizar README, comandos, CI, Docker e evidências. Executar pytest,
   Ruff, 12 regressões determinísticas, validação dos SDKs, wheel e Docker; revisar o diff.
 
