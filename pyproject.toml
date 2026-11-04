@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "emporio-agent"
+version = "0.1.0"
+description = "Agente de atendimento fundamentado nos dados da Empório da Música — desafio Artefact"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.34,<1",
+  "langgraph>=1.0,<2",
+  "langchain-openai>=1.0,<2",
+  "langchain-ollama>=1.0,<2",
+  "pydantic-settings>=2.8,<3",
+  "pypdf>=6,<7",
+  "rank-bm25>=0.2.2,<1",
+  "typer>=0.16,<1",
+]
+
+[project.scripts]
+emporio = "emporio.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-cov>=6,<8", "httpx>=0.28,<1", "ruff>=0.12,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/emporio"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = ["live: integração com provedor real (requer configuração explícita)"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.coverage.run]
+source = ["emporio"]
+omit = ["*/cli.py"]
