@@ -8,11 +8,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="EMPORIO_", env_file=".env", extra="ignore")
 
-    provider: Literal["demo", "openai", "ollama"] = "demo"
+    provider: Literal["demo", "openai", "openrouter", "ollama"] = "demo"
     model: str | None = None
     data_dir: Path = Path("data")
     state_dir: Path = Path("var")
     openai_api_key: SecretStr | None = Field(default=None, validation_alias="OPENAI_API_KEY")
+    openrouter_api_key: SecretStr | None = Field(
+        default=None, validation_alias="OPENROUTER_API_KEY"
+    )
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_site_url: str = "http://127.0.0.1:8000"
     ollama_url: str = "http://localhost:11434"
     max_tool_rounds: int = Field(default=4, ge=1, le=8)
     llm_timeout: float = Field(default=45, gt=0, le=120)
@@ -23,10 +28,17 @@ class Settings(BaseSettings):
     def validate_provider(self):
         if self.provider == "openai" and not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY é obrigatória quando EMPORIO_PROVIDER=openai.")
+        if self.provider == "openrouter" and (
+            not self.openrouter_api_key or not self.openrouter_api_key.get_secret_value().strip()
+        ):
+            raise ValueError("OPENROUTER_API_KEY é obrigatória quando EMPORIO_PROVIDER=openrouter.")
         if not self.model:
             self.model = {
                 "demo": "deterministic-v1",
                 "openai": "gpt-4.1-mini",
+                "openrouter": "xiaomi/mimo-v2.5",
                 "ollama": "qwen3:8b",
             }[self.provider]
+        if self.provider == "openrouter" and "/" not in self.model:
+            raise ValueError("EMPORIO_MODEL deve usar o formato provedor/modelo no OpenRouter.")
         return self

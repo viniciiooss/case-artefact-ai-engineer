@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **92 testes passaram** |
+| Suíte pytest completa | **108 testes passaram**, incluindo a adaptação OpenRouter |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -71,11 +71,32 @@ reutilização indevida de data de devolução e prioridade incorreta da memóri
 Cada correção ganhou regressão. A separação entre valor de política (por exemplo frete)
 e preço de produto também tem teste, assim como sinônimos legítimos de status de pedido.
 
-**Não foram executadas chamadas a OpenAI ou a um servidor Ollama com modelo real.** Não
-havia chave nem modelo configurados. Os resultados não medem qualidade de linguagem livre,
+**Não foram executadas gerações com OpenAI, OpenRouter ou servidor Ollama reais.** As
+credenciais do case Yaitec permaneceram no projeto de origem; esta integração usou chaves
+fictícias e transporte HTTP controlado. Os resultados não medem qualidade de linguagem livre,
 resistência universal a prompt injection, adequação jurídica das políticas ou segurança de
 produção. A defesa de resposta é conservadora e heurística; não substitui avaliação real.
 O workflow GitHub Actions foi preparado, mas não executado em um repositório remoto.
+
+## Atualização: reaproveitamento Yaitec/OpenRouter
+
+A suíte passou novamente com 108 testes, incluindo os 12 testes do módulo de provedores.
+O SDK OpenRouter real foi exercitado com respostas HTTP controladas: envio dos schemas,
+consulta do produto #95, tool result, resposta fundamentada, chave independente e
+atribuição da aplicação. Também foram verificados timeout de 45 segundos convertido para
+45.000 milissegundos, teto de tokens e ausência de repetição automática diante de erro 503.
+Erros 401/402/404/429 recebem códigos operacionais sanitizados, sem o texto bruto do provedor.
+Seis regressões adicionais da CLI verificam mensagens seguras por código e resposta genérica
+para códigos desconhecidos, mesmo quando o texto original da exceção contém um segredo.
+
+O novo lock inclui `langchain-openrouter==0.2.9` e seu SDK; a resolução selecionou Pydantic
+2.12.5, compatível com suas restrições. Todos os testes e os 12 cenários de avaliação
+foram reexecutados nessa resolução. Os testes de SDK não comprovam a qualidade semântica
+do modelo configurado. O [levantamento](reuse-yaitec.md) registra o que foi aproveitado.
+
+O wheel foi reinstalado e a imagem Docker reconstruída após o ajuste final. A nova imagem
+incluiu o SDK, executou uma consulta HTTP de GD20/PIX com fontes e histórico, e atingiu
+healthcheck `healthy` como UID 10001. O contêiner temporário e seu volume foram removidos.
 
 ## Ambiente desta sessão
 

@@ -12,9 +12,46 @@ from emporio.tools import make_tools
 
 logger = logging.getLogger(__name__)
 
+PROVIDER_ERROR_MESSAGES = {
+    "provider_auth_error": "Não foi possível autenticar no provedor. Confira a chave configurada.",
+    "provider_credit_error": (
+        "O provedor não autorizou o uso do saldo. Confira créditos e limites da chave."
+    ),
+    "provider_request_error": "O provedor não aceitou o modelo ou os parâmetros da requisição.",
+    "provider_rate_limit": "O provedor limitou as requisições. Aguarde e tente novamente.",
+    "provider_timeout": "O provedor ultrapassou o tempo limite. Tente novamente.",
+}
+
 
 class AgentUnavailable(RuntimeError):
-    pass
+    def __init__(self, message: str, *, code: str = "provider_error"):
+        super().__init__(message)
+        self.code = code
+
+
+def _provider_failure(exc: Exception) -> AgentUnavailable:
+    """Classificação por status, adaptada do case Yaitec; nunca repassa o corpo do provedor."""
+    status = getattr(exc, "status_code", None)
+    if status in {401, 403}:
+        code = "provider_auth_error"
+    elif status == 402:
+        code = "provider_credit_error"
+    elif status in {400, 404}:
+        code = "provider_request_error"
+    elif status == 429:
+        code = "provider_rate_limit"
+    elif isinstance(exc, TimeoutError) or "timeout" in type(exc).__name__.lower():
+        code = "provider_timeout"
+    else:
+        code = "provider_error"
+    return AgentUnavailable(
+        PROVIDER_ERROR_MESSAGES.get(
+            code,
+            "Não foi possível consultar o assistente agora. "
+            "Tente novamente em instantes ou fale com a equipe.",
+        ),
+        code=code,
+    )
 
 
 class VerificationFailed(ValueError):
@@ -42,6 +79,24 @@ class ChatService:
                 timeout=settings.llm_timeout,
                 max_retries=1,
                 max_tokens=1600,
+            )
+        elif model is None and settings.provider == "openrouter":
+            from langchain_openrouter import ChatOpenRouter
+
+            self.model = ChatOpenRouter(
+                model=settings.model,
+                api_key=settings.openrouter_api_key.get_secret_value(),
+                base_url=settings.openrouter_base_url,
+                app_url=settings.openrouter_site_url,
+                app_title="Emporio da Musica - Artefact",
+                temperature=0.2,
+                max_tokens=1600,
+                # O SDK nativo usa milissegundos, diferente do ChatOpenAI.
+                timeout=max(1, int(settings.llm_timeout * 1000)),
+                max_retries=0,
+                # Sem override, o SDK adota backoff de até uma hora mesmo com max_retries=0.
+                model_kwargs={"retries": None},
+                openrouter_provider={"require_parameters": True, "allow_fallbacks": False},
             )
         elif model is None and settings.provider == "ollama":
             from langchain_ollama import ChatOllama
@@ -105,13 +160,14 @@ class ChatService:
                     message, history, context, today.isoformat()
                 )
             except Exception as exc:
+                failure = _provider_failure(exc)
                 logger.warning(
-                    "agent_failure provider=%s type=%s", self.settings.provider, type(exc).__name__
+                    "agent_failure provider=%s type=%s code=%s",
+                    self.settings.provider,
+                    type(exc).__name__,
+                    failure.code,
                 )
-                raise AgentUnavailable(
-                    "Não foi possível consultar o assistente agora. "
-                    "Tente novamente em instantes ou fale com a equipe."
-                ) from None
+                raise failure from None
             result.update(
                 provider=self.settings.provider,
                 model=self.settings.model,

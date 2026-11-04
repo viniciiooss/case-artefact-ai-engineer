@@ -11,7 +11,7 @@ flowchart TD
     HTTP --> Service
     Service --> Sessions[(SQLite de sessões)]
     Service --> Graph[LangGraph: modelo → ferramentas → modelo]
-    Provider[OpenAI / Ollama / demo explícito] --> Graph
+    Provider[OpenAI / OpenRouter / Ollama / demo explícito] --> Graph
     Graph --> Tools[Ferramentas tipadas / autorização no servidor]
     Tools --> SQL[SQL parametrizado + cálculo em centavos]
     SQL --> Catalog[(SQLite do catálogo)]
@@ -94,8 +94,19 @@ com as fontes do turno; não é uma garantia semântica nem comprova qualidade d
 temporários, demo explícito e nenhum mock de resposta. Verifica 12 cenários, fontes,
 ferramentas, textos esperados/proibidos e restrições. Gera as cinco conversas em
 `examples/`, com hashes dos dados, sem LLM juiz. Os testes unitários e de integração
-cobrem regras e fronteiras adicionais. A avaliação não comprova desempenho com OpenAI
-ou Ollama nem qualidade de linguagem aberta; isso requer execução explícita desses modelos.
+cobrem regras e fronteiras adicionais. A avaliação não comprova desempenho com OpenAI,
+OpenRouter ou Ollama nem qualidade de linguagem aberta; isso requer execução desses modelos.
+
+## Reaproveitamento do case Yaitec
+
+O provedor OpenRouter e a classificação de erros foram adaptados dos padrões do case
+anterior do autor. Aqui a integração nativa `ChatOpenRouter` participa do mesmo ciclo
+de function calling, com autorização das ferramentas preservada no servidor. O contrato
+de geração JSON do RAG anterior não é usado no lugar das chamadas de ferramentas.
+Chave própria, identificação da aplicação, timeout convertido para milissegundos e
+tentativas do SDK desativadas são verificados por transporte HTTP controlado.
+O [levantamento de componentes](reuse-yaitec.md) distingue o que foi adaptado das
+evoluções possíveis em avaliação, observabilidade e retrieval.
 
 Para produção faltam autenticação forte, retenção e consentimento definidos, rate limit
 geral, HTTPS, gestão de segredos, operação/monitoramento, avaliações reais e integrações

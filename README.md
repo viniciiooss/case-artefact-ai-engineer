@@ -8,7 +8,7 @@ HTTP, persistência local, testes e conversas reproduzíveis.
 ![Chat web da Empório da Música](docs/assets/welcome.png)
 
 **O modo padrão `demo` é um simulador determinístico, não uma LLM.** Ele percorre o mesmo
-grafo e as mesmas ferramentas sem chave e sem rede. OpenAI e Ollama são escolhas explícitas;
+grafo e as mesmas ferramentas sem chave e sem rede. OpenAI, OpenRouter e Ollama são escolhas explícitas;
 falhas desses provedores não acionam fallback silencioso para demo.
 
 ## Executar em poucos minutos
@@ -56,6 +56,13 @@ OPENAI_API_KEY=sua-chave
 ```
 
 ```dotenv
+# OpenRouter: integração adaptada do case anterior da Yaitec
+EMPORIO_PROVIDER=openrouter
+EMPORIO_MODEL=xiaomi/mimo-v2.5
+OPENROUTER_API_KEY=sua-chave
+```
+
+```dotenv
 # Requer Ollama instalado e em execução, com modelo compatível com ferramentas
 EMPORIO_PROVIDER=ollama
 EMPORIO_MODEL=qwen3:8b
@@ -71,13 +78,22 @@ São padrões reproduzíveis e configuráveis, sem pressupor que sejam a melhor 
 todo ambiente. O modo demo torna a avaliação operacional possível sem contratar um provedor.
 As integrações estão implementadas, mas os cenários em `examples/` e a avaliação
 automática desta entrega usam somente demo. Não são evidência de qualidade de LLM real.
-Um teste de transporte controlado também exercita o SDK OpenAI, a serialização de
-function calling e a execução real das ferramentas; ele não faz chamadas ao provedor.
+Testes de transporte controlado exercitam os SDKs OpenAI e OpenRouter, a serialização de
+function calling e a execução real das ferramentas; eles não fazem chamadas aos provedores.
+
+OpenRouter usa a integração nativa `langchain-openrouter`, com modelo no formato
+`provedor/modelo`. O padrão `xiaomi/mimo-v2.5` reaproveita a seleção do case Yaitec;
+a disponibilidade e o suporte a ferramentas dependem do catálogo do provedor.
+São exigidos parâmetros compatíveis com as ferramentas, sem fallback automático para
+outro endpoint ou provedor da aplicação. O backend identifica autenticação, créditos,
+requisição inválida, limite de uso e timeout sem propagar mensagens brutas de erro.
+Veja a [análise do reaproveitamento](docs/reuse-yaitec.md) e a
+[integração oficial](https://openrouter.ai/blog/tutorials/langchain-chatopenrouter-setup/).
 
 | Variável | Padrão | Finalidade |
 | --- | --- | --- |
-| `EMPORIO_PROVIDER` | `demo` | `demo`, `openai` ou `ollama` |
-| `EMPORIO_MODEL` | por provedor | `deterministic-v1`, `gpt-4.1-mini` ou `qwen3:8b` |
+| `EMPORIO_PROVIDER` | `demo` | `demo`, `openai`, `openrouter` ou `ollama` |
+| `EMPORIO_MODEL` | por provedor | `deterministic-v1`, `gpt-4.1-mini`, `xiaomi/mimo-v2.5` ou `qwen3:8b` |
 | `EMPORIO_DATA_DIR` | `data` | Seis CSVs e PDF de políticas |
 | `EMPORIO_STATE_DIR` | `var` | Catálogo, sessões e protocolos locais |
 | `EMPORIO_MAX_TOOL_ROUNDS` | `4` | Limite de rodadas de ferramentas; de 1 a 8 |
@@ -85,9 +101,12 @@ function calling e a execução real das ferramentas; ele não faz chamadas ao p
 | `EMPORIO_HISTORY_TURNS` | `10` | Janela de turnos enviada ao modelo; de 1 a 30 |
 | `EMPORIO_TIMEZONE` | `America/Campo_Grande` | Data local para regras de prazo |
 | `EMPORIO_OLLAMA_URL` | `http://localhost:11434` | Endereço do servidor Ollama |
+| `EMPORIO_OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Endpoint do OpenRouter |
+| `EMPORIO_OPENROUTER_SITE_URL` | `http://127.0.0.1:8000` | Identificação da aplicação no OpenRouter |
 
-`OPENAI_API_KEY` é exigida somente em `openai`. Não versione `.env` nem bancos de sessão.
-No modo OpenAI, mensagens, contexto e resultados de ferramentas podem ser enviados à API;
+`OPENAI_API_KEY` é exigida em `openai`; `OPENROUTER_API_KEY`, em `openrouter`.
+As chaves são independentes. Não versione `.env` nem bancos de sessão.
+Nos modos OpenAI e OpenRouter, mensagens, contexto e resultados de ferramentas são enviados à API;
 em Ollama, ao servidor configurado. E-mail e token de sessão não integram o schema da LLM.
 
 ## Docker
@@ -205,7 +224,8 @@ resposta. Esses controles demonstram isolamento; produção ainda precisa de log
 política de retenção, rate limit geral, HTTPS, gestão de segredos, observabilidade operacional,
 integração com ERP/transportadoras e avaliação real dos provedores e da privacidade.
 As chamadas reais têm teto de 1.600 tokens de saída, timeout configurável e, na OpenAI,
-uma tentativa adicional para falhas transitórias. Esses limites controlam consumo;
+uma tentativa adicional para falhas transitórias. No OpenRouter, tentativas automáticas
+do SDK estão desativadas para respeitar o tempo limite do turno. Esses limites controlam consumo;
 o healthcheck verifica o serviço e os dados, sem testar conectividade do provedor.
 
 ## Verificar e reproduzir exemplos

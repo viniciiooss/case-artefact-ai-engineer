@@ -12,5 +12,11 @@
   real desktop/mobile, Docker build e contêiner healthy com UID 10001. Evidências em validation.md.
 - Sem chamadas a provedores LLM reais; nenhuma publicação externa ou envio de mensagens.
 - Repositório local preservado na branch feat/emporio-agent, sem branch-base anterior.
+- Solicitação seguinte: case Yaitec analisado em checkout local; suporte OpenRouter e
+  classificação sanitizada de falhas adaptados. Credenciais e documentos antigos preservados na origem.
+- Validação da atualização: 108 testes e 12/12 cenários com o lock atualizado; integração nativa
+  OpenRouter testada com transporte controlado, sem consumo de créditos. Detalhes em reuse-yaitec.md.
+- Revisão final da atualização aprovada; mensagens da CLI por código verificadas sem exposição
+  do texto bruto do provedor, incluindo códigos desconhecidos.
 - Ambiente macOS: uv exigiu acesso à configuração de rede fora do sandbox; instalação autorizada.
   Um atributo UF_HIDDEN no .pth da instalação editável bloqueou imports e foi removido localmente.

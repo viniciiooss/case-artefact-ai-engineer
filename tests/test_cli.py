@@ -41,6 +41,29 @@ def test_provider_failure_is_friendly(configured, monkeypatch):
     assert "Traceback" not in result.output
 
 
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        ("provider_auth_error", "autenticar no provedor"),
+        ("provider_credit_error", "créditos e limites da chave"),
+        ("provider_request_error", "modelo ou os parâmetros"),
+        ("provider_rate_limit", "limitou as requisições"),
+        ("provider_timeout", "tempo limite"),
+        ("unknown_error", "indisponível"),
+    ],
+)
+def test_provider_error_codes_show_only_safe_messages(configured, monkeypatch, code, expected):
+    def fail(*args, **kwargs):
+        raise AgentUnavailable("SECRET upstream response", code=code)
+
+    monkeypatch.setattr(ChatService, "chat", fail)
+    result = CliRunner().invoke(cli.app, ["ask", "Oi"])
+    assert result.exit_code == 1
+    assert expected in result.output
+    assert "SECRET" not in result.output
+    assert "Traceback" not in result.output
+
+
 def test_startup_errors_do_not_expose_configuration(configured, monkeypatch):
     def fail(*args, **kwargs):
         raise ValueError("SECRET")

@@ -10,6 +10,7 @@ from emporio.catalog import Catalog
 from emporio.config import Settings
 from emporio.retrieval import PolicyIndex
 from emporio.service import (
+    PROVIDER_ERROR_MESSAGES,
     AgentUnavailable,
     ChatService,
     VerificationFailed,
@@ -57,6 +58,10 @@ def _error(exc: Exception):
         message = "Uma resposta já está sendo preparada nesta conversa."
     elif isinstance(exc, SessionNotFound):
         message = "Conversa não encontrada. Use /novo para começar outra."
+    elif isinstance(exc, AgentUnavailable):
+        message = PROVIDER_ERROR_MESSAGES.get(
+            exc.code, "O atendimento está indisponível agora. Tente novamente em instantes."
+        )
     else:
         message = "O atendimento está indisponível agora. Tente novamente em instantes."
     console.print(message)
