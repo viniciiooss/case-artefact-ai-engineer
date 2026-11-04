@@ -80,13 +80,13 @@ def test_openai_configuration_rejects_missing_key_instead_of_switching_to_demo(m
         Settings(provider="openai", _env_file=None)
 
 
-def test_openrouter_uses_a_separate_secret_and_model_from_the_previous_case():
+def test_openrouter_uses_a_separate_secret_and_the_requested_mimo_model():
     from emporio.config import Settings
 
     settings = Settings(
         provider="openrouter", OPENROUTER_API_KEY="test-openrouter-key", _env_file=None
     )
-    assert settings.model == "xiaomi/mimo-v2.5"
+    assert settings.model == "xiaomi/mimo-v2.6-pro"
     assert settings.openrouter_api_key.get_secret_value() == "test-openrouter-key"
     assert "test-openrouter-key" not in repr(settings)
 
@@ -104,7 +104,7 @@ def test_openrouter_requires_provider_model_format():
 
     with pytest.raises(ValueError, match="provedor/modelo"):
         Settings(
-            provider="openrouter", OPENROUTER_API_KEY="test", model="mimo-v2.5", _env_file=None
+            provider="openrouter", OPENROUTER_API_KEY="test", model="mimo-v2.6-pro", _env_file=None
         )
 
 
@@ -162,8 +162,9 @@ def _intercept_httpx(monkeypatch, handler):
     monkeypatch.setattr(httpx.Client, "__init__", configure_transport)
 
 
+@pytest.mark.parametrize("provider_order", [[], ["Xiaomi"]])
 def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_timeout(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, provider_order
 ):
     from langchain_openrouter import ChatOpenRouter
 
@@ -194,7 +195,7 @@ def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_t
                 "object": "chat.completion",
                 "system_fingerprint": None,
                 "created": 0,
-                "model": "xiaomi/mimo-v2.5",
+                "model": "xiaomi/mimo-v2.6-pro",
                 "choices": [
                     {
                         "index": 0,
@@ -210,6 +211,7 @@ def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_t
     settings = Settings(
         provider="openrouter",
         OPENROUTER_API_KEY="test-router-key",
+        openrouter_provider_order=provider_order,
         data_dir=Path(__file__).resolve().parents[1] / "data",
         state_dir=tmp_path,
         _env_file=None,
@@ -227,7 +229,12 @@ def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_t
     assert requests[0].extensions["timeout"]["read"] == settings.llm_timeout
     assert first["provider"]["require_parameters"] is True
     assert first["provider"]["allow_fallbacks"] is False
+    if provider_order:
+        assert first["provider"]["order"] == provider_order
+    else:
+        assert not first["provider"].get("order")
     assert first["max_tokens"] == 1600
+    assert first["model"] == "xiaomi/mimo-v2.6-pro"
     assert "response_format" not in first
     assert any(t["function"]["name"] == "get_order" for t in first["tools"])
     tool_message = next(m for m in second["messages"] if m["role"] == "tool")

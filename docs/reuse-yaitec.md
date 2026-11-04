@@ -9,7 +9,7 @@ configuração, cliente LLM, grafo, retrieval, embeddings, guardrails e testes.
 
 | Componente do case anterior | Aplicação no desafio Artefact |
 | --- | --- |
-| Seleção OpenAI/OpenRouter, chave independente e identificação da aplicação em `config.py`/`llm.py` | **Adaptado.** `EMPORIO_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, slug `xiaomi/mimo-v2.5` configurável e atribuição própria da Empório. |
+| Seleção OpenAI/OpenRouter, chave independente e identificação da aplicação em `config.py`/`llm.py` | **Adaptado.** `EMPORIO_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, modelo configurável e atribuição própria da Empório. O modelo inicial foi atualizado para `xiaomi/mimo-v2.6-pro` a pedido do usuário. |
 | Erros de autenticação, modelo inválido e rate limit | **Adaptado.** Classificação sanitizada por status, incluindo créditos insuficientes e timeout. A CLI e o log operacional distinguem as causas; a API preserva sua mensagem genérica para o cliente. |
 | Geração JSON e roteamento de fallback | **Contrato diferente.** O agente da Artefact precisa executar ferramentas comerciais e verificar grants. Usa `ChatOpenRouter.bind_tools` no grafo existente, sem trocar silenciosamente de modelo nem substituir uma falha por demo. |
 | LangGraph e fontes anexadas no backend | **Padrão já presente.** A versão da Artefact mantém ferramentas tipadas e referências derivadas de seus resultados reais. |
@@ -29,6 +29,10 @@ descritos na [documentação do OpenRouter](https://openrouter.ai/blog/tutorials
 O catálogo público consultado listava suporte a `tools` para
 [`xiaomi/mimo-v2.5`](https://openrouter.ai/api/v1/models/xiaomi/mimo-v2.5/endpoints).
 Isso orientou a configuração padrão; não comprova a qualidade do modelo para o case.
+Após o pedido de atualização, o atendimento passou para
+[`xiaomi/mimo-v2.6-pro`](https://openrouter.ai/xiaomi/mimo-v2.6-pro) e o juiz para
+[`z-ai/glm-5.3`](https://openrouter.ai/z-ai/glm-5.3) com `reasoning.effort=max`.
+O GLM tem orçamento e timeout próprios da avaliação; o juiz não participa do atendimento.
 `require_parameters=true` exige suporte aos parâmetros enviados; veja
 [roteamento de provedores](https://openrouter.ai/docs/guides/routing/provider-selection).
 
@@ -43,7 +47,9 @@ No `.env` deste projeto:
 
 ```dotenv
 EMPORIO_PROVIDER=openrouter
-EMPORIO_MODEL=xiaomi/mimo-v2.5
+EMPORIO_MODEL=xiaomi/mimo-v2.6-pro
+EMPORIO_EVAL_MODEL=z-ai/glm-5.3
+EMPORIO_EVAL_REASONING_EFFORT=max
 OPENROUTER_API_KEY=sua-chave
 ```
 

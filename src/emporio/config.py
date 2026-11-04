@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     )
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_site_url: str = "http://127.0.0.1:8000"
+    openrouter_provider_order: list[str] = Field(default_factory=list, max_length=10)
     langfuse_enabled: bool = False
     langfuse_public_key: SecretStr | None = Field(
         default=None, validation_alias="LANGFUSE_PUBLIC_KEY"
@@ -30,7 +31,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("LANGFUSE_BASE_URL", "LANGFUSE_HOST"),
     )
     langfuse_environment: str = "artefact-local"
-    eval_model: str = "openai/gpt-4.1-mini"
+    eval_model: str = "z-ai/glm-5.3"
+    eval_reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] = (
+        "max"
+    )
+    eval_max_tokens: int = Field(default=8192, ge=256, le=32768)
+    eval_timeout: float = Field(default=120, gt=0, le=300)
     ollama_url: str = "http://localhost:11434"
     max_tool_rounds: int = Field(default=4, ge=1, le=8)
     llm_timeout: float = Field(default=45, gt=0, le=120)
@@ -54,7 +60,7 @@ class Settings(BaseSettings):
             self.model = {
                 "demo": "deterministic-v1",
                 "openai": "gpt-4.1-mini",
-                "openrouter": "xiaomi/mimo-v2.5",
+                "openrouter": "xiaomi/mimo-v2.6-pro",
                 "ollama": "qwen3:8b",
             }[self.provider]
         if self.provider == "openrouter" and "/" not in self.model:

@@ -58,7 +58,7 @@ OPENAI_API_KEY=sua-chave
 ```dotenv
 # OpenRouter: integração adaptada do case anterior da Yaitec
 EMPORIO_PROVIDER=openrouter
-EMPORIO_MODEL=xiaomi/mimo-v2.5
+EMPORIO_MODEL=xiaomi/mimo-v2.6-pro
 OPENROUTER_API_KEY=sua-chave
 ```
 
@@ -76,14 +76,15 @@ compacto com suporte a ferramentas para a opção via API. Qwen3 8B permite expl
 opção local, com exigências de hardware e aderência às ferramentas que precisam ser medidas.
 São padrões reproduzíveis e configuráveis, sem pressupor que sejam a melhor escolha para
 todo ambiente. O modo demo torna a avaliação operacional possível sem contratar um provedor.
-As integrações estão implementadas, mas os cenários em `examples/` e a avaliação
-automática desta entrega usam somente demo. Não são evidência de qualidade de LLM real.
+Os cenários em `examples/` e a avaliação determinística usam demo. A avaliação com
+LLM real tem relatório separado e limites descritos em [validation.md](docs/validation.md).
 Testes de transporte controlado exercitam os SDKs OpenAI e OpenRouter, a serialização de
 function calling e a execução real das ferramentas; eles não fazem chamadas aos provedores.
 
 OpenRouter usa a integração nativa `langchain-openrouter`, com modelo no formato
-`provedor/modelo`. O padrão `xiaomi/mimo-v2.5` reaproveita a seleção do case Yaitec;
-a disponibilidade e o suporte a ferramentas dependem do catálogo do provedor.
+`provedor/modelo`. O atendimento usa por padrão
+[`xiaomi/mimo-v2.6-pro`](https://openrouter.ai/xiaomi/mimo-v2.6-pro), atualizado a pedido
+do usuário. A disponibilidade e o suporte a ferramentas dependem do catálogo do provedor.
 São exigidos parâmetros compatíveis com as ferramentas, sem fallback automático para
 outro endpoint ou provedor da aplicação. O backend identifica autenticação, créditos,
 requisição inválida, limite de uso e timeout sem propagar mensagens brutas de erro.
@@ -93,7 +94,7 @@ Veja a [análise do reaproveitamento](docs/reuse-yaitec.md) e a
 | Variável | Padrão | Finalidade |
 | --- | --- | --- |
 | `EMPORIO_PROVIDER` | `demo` | `demo`, `openai`, `openrouter` ou `ollama` |
-| `EMPORIO_MODEL` | por provedor | `deterministic-v1`, `gpt-4.1-mini`, `xiaomi/mimo-v2.5` ou `qwen3:8b` |
+| `EMPORIO_MODEL` | por provedor | `deterministic-v1`, `gpt-4.1-mini`, `xiaomi/mimo-v2.6-pro` ou `qwen3:8b` |
 | `EMPORIO_DATA_DIR` | `data` | Seis CSVs e PDF de políticas |
 | `EMPORIO_STATE_DIR` | `var` | Catálogo, sessões e protocolos locais |
 | `EMPORIO_MAX_TOOL_ROUNDS` | `4` | Limite de rodadas de ferramentas; de 1 a 8 |
@@ -103,10 +104,14 @@ Veja a [análise do reaproveitamento](docs/reuse-yaitec.md) e a
 | `EMPORIO_OLLAMA_URL` | `http://localhost:11434` | Endereço do servidor Ollama |
 | `EMPORIO_OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Endpoint do OpenRouter |
 | `EMPORIO_OPENROUTER_SITE_URL` | `http://127.0.0.1:8000` | Identificação da aplicação no OpenRouter |
+| `EMPORIO_OPENROUTER_PROVIDER_ORDER` | `[]` | Endpoints priorizados só no atendimento, por exemplo `["Xiaomi"]`; fallback desativado |
 | `EMPORIO_LANGFUSE_ENABLED` | `false` | Ativa tracing com as chaves Langfuse configuradas |
 | `LANGFUSE_BASE_URL` | `https://cloud.langfuse.com` | Região/servidor do projeto; aceita o alias `LANGFUSE_HOST` |
 | `EMPORIO_LANGFUSE_ENVIRONMENT` | `artefact-local` | Ambiente das observações da Empório |
-| `EMPORIO_EVAL_MODEL` | `openai/gpt-4.1-mini` | Modelo do juiz DeepEval, chamado pelo OpenRouter |
+| `EMPORIO_EVAL_MODEL` | `z-ai/glm-5.3` | Modelo do juiz DeepEval, chamado pelo OpenRouter |
+| `EMPORIO_EVAL_REASONING_EFFORT` | `max` | Esforço de raciocínio do juiz; requer suporte do modelo escolhido |
+| `EMPORIO_EVAL_MAX_TOKENS` | `8192` | Limite por chamada do juiz, incluindo raciocínio e resposta |
+| `EMPORIO_EVAL_TIMEOUT` | `120` | Tempo limite de uma chamada ao juiz, em segundos |
 
 `OPENAI_API_KEY` é exigida em `openai`; `OPENROUTER_API_KEY`, em `openrouter`.
 As chaves são independentes. Não versione `.env` nem bancos de sessão.
@@ -146,6 +151,9 @@ uv run --no-sync python scripts/evaluate_llm.py --limit 4 --report var/deepeval.
 Esse comando **envia perguntas, respostas e referências ao OpenRouter e consome créditos**
 da chave configurada. O agente usa `EMPORIO_MODEL`; o juiz usa `EMPORIO_EVAL_MODEL`, uma
 chamada por métrica e caso, sem gerar etapas extras da rubrica nem retries automáticos.
+O padrão do juiz é [`z-ai/glm-5.3`](https://openrouter.ai/z-ai/glm-5.3) com
+`reasoning.effort=max`: “Max” é um nível de raciocínio, não outro slug. O juiz tem orçamento
+de tokens e timeout próprios para reservar espaço para o raciocínio e o JSON final.
 São quatro casos: catálogo/PIX em dois turnos, promoção sem acumular desconto, devolução
 condicionada e tentativa de listar dados de clientes. Os bancos da avaliação são temporários.
 
@@ -278,7 +286,9 @@ política de retenção, rate limit geral, HTTPS, gestão de segredos, observabi
 integração com ERP/transportadoras e avaliação real dos provedores e da privacidade.
 As chamadas reais têm teto de 1.600 tokens de saída, timeout configurável e, na OpenAI,
 uma tentativa adicional para falhas transitórias. No OpenRouter, tentativas automáticas
-do SDK estão desativadas para respeitar o tempo limite do turno. Esses limites controlam consumo;
+do SDK estão desativadas. Se uma resposta final falhar na verificação das fontes, o grafo
+permite uma única tentativa de correção, preservando o limite total de rodadas de ferramentas.
+O juiz usa os limites separados acima. Esses limites controlam consumo;
 o healthcheck verifica o serviço e os dados, sem testar conectividade do provedor.
 
 ## Verificar e reproduzir exemplos
@@ -313,5 +323,5 @@ turnos, pedido antes/depois da identificação e limites/promoção sem acumular
 Este diretório é a entrega em repositório Git local com histórico. Publicação no GitHub
 e envio por e-mail dependem de uma ação externa autorizada e não são feitos pelo aplicativo.
 Codex/ChatGPT foi utilizado na análise, implementação, elaboração de testes, revisão
-automatizada e assistência de código. Isso não implica validação humana nem validação
-com LLM real; consulte os comandos e limites da evidência de execução documentada.
+automatizada e assistência de código. Comandos, resultados observados e limites da
+validação estão em [validation.md](docs/validation.md).

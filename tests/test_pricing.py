@@ -31,6 +31,15 @@ def test_pix_uses_table_price_and_rounds_half_up():
     assert result["discount_percent"] == 5
 
 
+def test_quote_returns_unit_and_total_savings_without_model_arithmetic():
+    from emporio.pricing import quote
+
+    result = quote(product(), payment="pix", quantity=2)
+    assert result["unit_discount_cents"] == 10995
+    assert result["discount_cents"] == 21990
+    assert result["total_cents"] == 417810
+
+
 def test_active_promotion_cannot_be_stacked_with_pix():
     from emporio.pricing import quote
 

@@ -31,6 +31,9 @@ flowchart TD
 3. O modelo produz resposta ou chamadas de ferramentas. O grafo executa ferramentas
    conhecidas com validação Pydantic, registra duração/resultado e retorna observações
    ao modelo. O padrão tem ação e observação, sem salvar raciocínio interno.
+   Se a resposta final não tiver evidência suficiente, uma única tentativa de correção
+   solicita nova consulta e preserva o orçamento total de rodadas. Valores de economia
+   são calculados no backend e só sustentam menções a desconto, não o preço do produto.
 4. Fontes vêm dos resultados das ferramentas, com IDs, referências e páginas reais.
    O serviço salva mensagens públicas finais e contexto mínimo: IDs de produtos e canal,
    motivo e datas de uma devolução. O trace completo de argumentos e observações não é

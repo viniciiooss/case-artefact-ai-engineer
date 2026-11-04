@@ -28,7 +28,10 @@ def main() -> int:
             overrides["eval_model"] = args.judge_model
         with TemporaryDirectory(prefix="emporio-llm-eval-") as state_dir:
             settings = Settings(**overrides, state_dir=Path(state_dir))
-            print(f"Agente: {settings.model}; juiz: {settings.eval_model}; casos: {args.limit}")
+            print(
+                f"Agente: {settings.model}; juiz: {settings.eval_model} "
+                f"(raciocínio {settings.eval_reasoning_effort}); casos: {args.limit}"
+            )
             report = run_evaluation(settings, cases[: args.limit])
     except ImportError:
         print(

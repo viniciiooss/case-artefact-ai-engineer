@@ -140,10 +140,34 @@ class AgentRunner:
             cls = HumanMessage if entry["role"] == "user" else AIMessage
             messages.append(cls(content=entry["content"]))
         messages.append(HumanMessage(content=question))
+        graph_config = {**(config or {}), "recursion_limit": self.max_rounds * 2 + 5}
         state = self.graph.invoke(
             {"messages": messages, "outputs": [], "traces": [], "rounds": 0},
-            config={**(config or {}), "recursion_limit": self.max_rounds * 2 + 5},
+            config=graph_config,
         )
+        if state["rounds"] < self.max_rounds and not supported_answer(
+            state["messages"][-1].text, state["outputs"]
+        ):
+            # Uma correção por turno, preservando o limite total de rodadas de ferramentas.
+            state = self.graph.invoke(
+                {
+                    **state,
+                    "messages": [
+                        *state["messages"],
+                        SystemMessage(
+                            content=(
+                                "A resposta anterior contém afirmações sem evidência "
+                                "suficiente neste turno. Consulte a ferramenta adequada "
+                                "antes de responder. Para preço, PIX ou parcelas, use "
+                                "quote_product com o produto do contexto e apresente "
+                                "somente valores retornados. Se faltar informação, "
+                                "peça esclarecimento."
+                            )
+                        ),
+                    ],
+                },
+                config=graph_config,
+            )
         sources = {}
         new_context = context.copy()
         for output in state["outputs"]:

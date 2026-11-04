@@ -185,6 +185,39 @@ def test_unverified_model_price_is_replaced_with_safe_answer(tmp_path):
     assert "consult" in result["message"].lower()
 
 
+def test_price_followup_that_skips_tools_is_repaired_with_a_fresh_quote(tmp_path):
+    from langchain_core.messages import AIMessage
+
+    model = ScriptedModel(
+        [
+            tool_call("get_product", {"product_id": 95}),
+            AIMessage(content="O GD20 custa R$ 2.199,00."),
+            AIMessage(content="No PIX, custa R$ 2.089,05."),
+            tool_call("quote_product", {"product_id": 95, "payment": "pix"}, "fresh-quote"),
+            AIMessage(content="Na simulação, o total no PIX é R$ 2.089,05, sem reserva ou compra."),
+        ]
+    )
+    svc = service(tmp_path, model=model)
+    sid = svc.create_session()["session_id"]
+    svc.chat(sid, "Quanto custa o GD20?")
+    response = svc.chat(sid, "E no PIX?")
+    assert "2.089,05" in response["message"]
+    assert any(t["name"] == "quote_product" for t in response["tools"])
+    assert any(s["id"] == "product-95" for s in response["sources"])
+    assert len(model.calls) == 5
+
+
+def test_unsupported_claim_gets_at_most_one_repair_attempt(tmp_path):
+    from langchain_core.messages import AIMessage
+
+    model = ScriptedModel([AIMessage(content="O GD20 custa R$ 1,00.")])
+    svc = service(tmp_path, model=model)
+    response = svc.chat(svc.create_session()["session_id"], "Preço do GD20?")
+    assert len(model.calls) == 2
+    assert "R$ 1,00" not in response["message"]
+    assert "consult" in response["message"].lower()
+
+
 def test_provider_failure_is_explicit_and_history_is_not_partially_written(tmp_path):
     from emporio.service import AgentUnavailable
 
@@ -218,6 +251,53 @@ def test_even_a_catalog_source_cannot_validate_a_different_price(tmp_path):
     svc = service(tmp_path, model)
     result = svc.chat(svc.create_session()["session_id"], "Preço do GD20?")
     assert "R$ 1,00" not in result["message"]
+
+
+@pytest.mark.parametrize(
+    "answer,allowed",
+    [
+        ("Desconto de R$ 109,95. Total no PIX: R$ 2.089,05.", True),
+        ("O GD20 custa R$ 2.089,05 no PIX, com desconto de R$ 109,95.", True),
+        ("O GD20 custa R$ 2.089,05 com desconto de R$ 109,95.", True),
+        ("No PIX, R$ 109,95 de desconto; o GD20 custa R$ 2.089,05.", True),
+        ("Desconto de 5% no PIX | − R$ 109,95\nTotal no PIX | R$ 2.089,05", True),
+        ("**Desconto PIX (5%):** − **R$ 109,95**. Total: **R$ 2.089,05**.", True),
+        ("Você economiza R$ 109,95. O GD20 custa R$ 2.089,05 no PIX.", True),
+        ("O GD20 custa R$ 109,95.", False),
+        ("O GD20 sai por R$ 109,95 no PIX.", False),
+        ("Total no PIX: R$ 109,95.", False),
+        ("O GD20 custa R$ 109,95 com desconto de R$ 109,95.", False),
+        ("Desconto de R$ 109,95 e total no PIX de R$ 109,95.", False),
+    ],
+)
+def test_quote_savings_cannot_be_used_as_the_product_price(tmp_path, answer, allowed):
+    from emporio.grounding import supported_answer
+    from emporio.pricing import quote
+
+    svc = service(tmp_path)
+    payload = {"quote": quote(svc.catalog.get_product(95), payment="pix")}
+    assert supported_answer(answer, [{"result": payload}]) is allowed
+
+
+@pytest.mark.parametrize(
+    "answer,allowed",
+    [
+        (
+            "Preço de tabela | R$ 359,00\n"
+            "Desconto promocional ativo | 10% (− R$ 35,90)\n"
+            "Preço final no PIX | R$ 323,10",
+            True,
+        ),
+        ("O Kalani KAL-700T custa R$ 35,90.", False),
+    ],
+)
+def test_active_promotion_savings_are_evidence_for_discount_labels_only(tmp_path, answer, allowed):
+    from emporio.grounding import supported_answer
+    from emporio.pricing import quote
+
+    svc = service(tmp_path)
+    payload = {"quote": quote(svc.catalog.get_product(127), payment="pix")}
+    assert supported_answer(answer, [{"result": payload}]) is allowed
 
 
 def test_invalid_json_tool_call_fails_explicitly_without_empty_history(tmp_path):

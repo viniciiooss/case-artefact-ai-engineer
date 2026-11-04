@@ -93,6 +93,8 @@ def quote(
         "payment": payment,
         "original_unit_cents": product["price_cents"],
         "unit_cents": unit,
+        "unit_discount_cents": product["price_cents"] - unit,
+        "discount_cents": (product["price_cents"] - unit) * quantity,
         "discount_percent": percent,
         "pix_applied": payment == "pix" and not promotion,
         "total_cents": total,

@@ -50,13 +50,34 @@ def supported_answer(answer: str, outputs: list[dict]) -> bool:
                 known_money.update(money_mentions(source.get("excerpt", "")))
     if not money_mentions(answer).issubset(known_money):
         return False
-    commercial_money = set()
+    commercial_money, discount_money = set(), set()
     for payload in payloads:
         for key in ("product", "products", "quote"):
-            commercial_money.update(_cents_fields(payload.get(key, {})))
+            data = payload.get(key, {})
+            if key == "quote":
+                # Economia é evidência para o desconto, não para o preço do instrumento.
+                discount_money.update(
+                    _cents_fields({k: v for k, v in data.items() if k.endswith("discount_cents")})
+                )
+                data = {k: v for k, v in data.items() if not k.endswith("discount_cents")}
+            commercial_money.update(_cents_fields(data))
     # R$ 35 de frete não sustenta a afirmação de que um instrumento custa R$ 35.
     for sentence in re.split(r"(?<=[.!?])\s+|\n+", answer):
-        amounts = money_mentions(sentence)
+        amounts = set()
+        for match in MONEY.finditer(sentence):
+            value = cents(match.group(1).replace(".", "").replace(",", "."))
+            if value in discount_money - commercial_money:
+                before = normalize(sentence[: match.start()])
+                after = normalize(sentence[match.end() :])
+                labelled_discount = re.search(
+                    r"\b(?:desconto|economia|abatimento|economiza)"
+                    r"(?:\s+(?:de|no|pix|a|vista|aplicado|promocional|ativo|ativa|total|\d+))*$",
+                    before,
+                ) or re.match(r"^(?:de\s+)?(?:desconto|economia|abatimento)\b", after)
+                if not labelled_discount:
+                    return False
+                continue
+            amounts.add(value)
         wording = normalize(sentence)
         price_claim = re.search(
             r"\b(?:custa|custam|preco|total dos produtos|por unidade)\b", wording

@@ -98,7 +98,15 @@ class ChatService:
                 max_retries=0,
                 # Sem override, o SDK adota backoff de até uma hora mesmo com max_retries=0.
                 model_kwargs={"retries": None},
-                openrouter_provider={"require_parameters": True, "allow_fallbacks": False},
+                openrouter_provider={
+                    "require_parameters": True,
+                    "allow_fallbacks": False,
+                    **(
+                        {"order": settings.openrouter_provider_order}
+                        if settings.openrouter_provider_order
+                        else {}
+                    ),
+                },
             )
         elif model is None and settings.provider == "ollama":
             from langchain_ollama import ChatOllama
@@ -147,7 +155,7 @@ class ChatService:
         if not 1 <= len(message) <= 4000:
             raise ValueError("A mensagem deve conter de 1 a 4000 caracteres.")
         start = time.perf_counter()
-        lease = (self.settings.max_tool_rounds + 1) * (self.settings.llm_timeout * 2 + 1) + 30
+        lease = (self.settings.max_tool_rounds + 2) * (self.settings.llm_timeout * 2 + 1) + 30
         with self.sessions.turn(session_id, lease_seconds=lease):
             context = self.sessions.context(session_id)
             history = self.sessions.history(session_id, limit=self.settings.history_turns * 2)

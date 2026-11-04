@@ -13,12 +13,16 @@ como base; a avaliação com juiz roda em comando separado.
   pontuações e falhas. Acrescentar quatro casos com respostas de referência revisadas,
   duas métricas G-Eval em português e `scripts/evaluate_llm.py` com limite de casos e
   relatório local. DeepEval permanece no extra `eval`, fora do atendimento.
-- [ ] Ativação local: criar `.env` com permissão 0600 usando somente as credenciais
+- [x] Ativação local: criar `.env` com permissão 0600 usando somente as credenciais
   necessárias do checkout Yaitec, sem imprimir valores nem alterar o projeto original.
   Verificar autenticação e executar uma amostra real pequena, com geração e juiz.
-  Estado: `.env` criado e Langfuse autenticado; nova chave OpenRouter autenticada com
-  HTTP 200 após substituição pelo usuário. Servidor recarregado. Execução real pendente
-  de autorização para envio dos quatro casos e consumo de créditos.
+  Estado: execução paga autorizada e realizada; primeiro lote 2/4 preservado. Corrigidos
+  acompanhamento de PIX, rótulos de desconto e separação das dimensões da rubrica.
+  Modelos solicitados `xiaomi/mimo-v2.6-pro` no atendimento e `z-ai/glm-5.3` com esforço
+  `max` no juiz, orçamento de 8.192 tokens e timeout de 120 segundos próprios da avaliação.
+  Quatro casos validados com retestes direcionados, sem afirmar um único lote 4/4; cada
+  nota tem relatório de origem no resumo local. Langfuse recebeu 70 observações dos modelos
+  novos sem inputs/outputs. Servidor recarregado e pronto para teste manual na porta 8000.
 - [x] Entrega: atualizar README, comandos, CI, Docker e evidências. Executar pytest,
   Ruff, 12 regressões determinísticas, validação dos SDKs, wheel e Docker; revisar o diff.
 

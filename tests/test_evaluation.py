@@ -35,7 +35,7 @@ def judge_transport(monkeypatch):
                 "object": "chat.completion",
                 "system_fingerprint": None,
                 "created": 0,
-                "model": "openai/gpt-4.1-mini",
+                "model": "z-ai/glm-5.3",
                 "choices": [
                     {
                         "index": 0,
@@ -91,11 +91,12 @@ def test_judge_uses_openrouter_and_returns_validated_schemas_sync_and_async(
         body = json.loads(request.content)
         assert str(request.url) == "https://openrouter.ai/api/v1/chat/completions"
         assert request.headers["authorization"] == "Bearer test-judge-key"
-        assert body["model"] == "openai/gpt-4.1-mini"
+        assert body["model"] == "z-ai/glm-5.3"
         assert body["response_format"]["type"] == "json_object"
-        assert body["max_tokens"] == 1600
+        assert body["max_tokens"] == 8192
+        assert body["reasoning"]["effort"] == "max"
         assert body["temperature"] == 0
-        assert request.extensions["timeout"]["read"] == 45
+        assert request.extensions["timeout"]["read"] == 120
 
 
 @pytest.mark.parametrize(("score", "passed"), [(9, True), (2, False)])
@@ -135,6 +136,30 @@ def test_malformed_judge_output_does_not_turn_into_a_passing_score(tmp_path, jud
         OpenRouterJudge(configured(tmp_path)).generate("Avalie", schema=Verdict)
 
 
+def test_privacy_judge_receives_conversation_without_commercial_reference(
+    tmp_path, judge_transport
+):
+    from deepeval.test_case import LLMTestCase
+
+    from emporio.evaluation import OpenRouterJudge, build_metrics
+
+    requests, replies = judge_transport
+    replies.append('{"score":10,"reason":"Nenhuma exposição de dados."}')
+    metric = build_metrics(OpenRouterJudge(configured(tmp_path)))[1]
+    metric.measure(
+        LLMTestCase(
+            input="Qual o preço no PIX?",
+            actual_output="O valor público é R$ 323,10.",
+            expected_output="COMMERCIAL_REFERENCE_ONLY preço e desconto esperado.",
+        ),
+        _show_indicator=False,
+    )
+    body = json.loads(requests[0].content)
+    sent = json.dumps(body, ensure_ascii=False)
+    assert "COMMERCIAL_REFERENCE_ONLY" not in sent
+    assert "323,10" in sent
+
+
 def test_evaluation_report_keeps_failed_metric_and_removes_sessions(tmp_path, judge_transport):
     from emporio.evaluation import run_evaluation
 
@@ -155,7 +180,9 @@ def test_evaluation_report_keeps_failed_metric_and_removes_sessions(tmp_path, ju
     assert report["total"] == 1 and report["passed"] == 0
     assert report["cases"][0]["metrics"][0]["score"] == 0.2
     assert report["metadata"]["provider"] == "demo"
-    assert report["metadata"]["judge_model"] == "openai/gpt-4.1-mini"
+    assert report["metadata"]["judge_model"] == "z-ai/glm-5.3"
+    assert report["metadata"]["judge_reasoning_effort"] == "max"
+    assert report["metadata"]["judge_max_tokens"] == 8192
     serialized = json.dumps(report)
     assert "test-judge-key" not in serialized
     assert '"token"' not in serialized
