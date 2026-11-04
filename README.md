@@ -19,7 +19,7 @@ implementação. Para executar localmente: Python **3.11 ou superior** e
 Execute os comandos a partir da raiz do repositório:
 
 ```bash
-uv sync --locked --no-editable
+uv sync --locked --no-editable --extra observability
 uv run --no-sync emporio serve
 ```
 
@@ -103,11 +103,64 @@ Veja a [análise do reaproveitamento](docs/reuse-yaitec.md) e a
 | `EMPORIO_OLLAMA_URL` | `http://localhost:11434` | Endereço do servidor Ollama |
 | `EMPORIO_OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Endpoint do OpenRouter |
 | `EMPORIO_OPENROUTER_SITE_URL` | `http://127.0.0.1:8000` | Identificação da aplicação no OpenRouter |
+| `EMPORIO_LANGFUSE_ENABLED` | `false` | Ativa tracing com as chaves Langfuse configuradas |
+| `LANGFUSE_BASE_URL` | `https://cloud.langfuse.com` | Região/servidor do projeto; aceita o alias `LANGFUSE_HOST` |
+| `EMPORIO_LANGFUSE_ENVIRONMENT` | `artefact-local` | Ambiente das observações da Empório |
+| `EMPORIO_EVAL_MODEL` | `openai/gpt-4.1-mini` | Modelo do juiz DeepEval, chamado pelo OpenRouter |
 
 `OPENAI_API_KEY` é exigida em `openai`; `OPENROUTER_API_KEY`, em `openrouter`.
 As chaves são independentes. Não versione `.env` nem bancos de sessão.
 Nos modos OpenAI e OpenRouter, mensagens, contexto e resultados de ferramentas são enviados à API;
 em Ollama, ao servidor configurado. E-mail e token de sessão não integram o schema da LLM.
+
+## Observabilidade e avaliação de LLM
+
+A integração usa dois extras independentes: `observability` para Langfuse e `eval` para
+DeepEval. O runtime e o Docker incluem somente o extra de observabilidade. DeepEval roda
+em um comando de avaliação, sem aumentar a latência ou o custo das mensagens do usuário.
+
+Para Langfuse, configure seu projeto no `.env`:
+
+```dotenv
+EMPORIO_LANGFUSE_ENABLED=true
+LANGFUSE_PUBLIC_KEY=sua-chave-publica
+LANGFUSE_SECRET_KEY=sua-chave-secreta
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+EMPORIO_LANGFUSE_ENVIRONMENT=artefact-local
+```
+
+Os traces têm nome `emporio.chat`, tags `emporio`/`artefact`, duração do grafo/ferramentas,
+modelo e contagem de tokens quando informada pelo SDK. O identificador da conversa é
+derivado por hash. Entradas, saídas e metadados livres são removidos antes da exportação;
+erros do provedor são sanitizados também no status OpenTelemetry. O buffer é liberado
+no encerramento da API/CLI. Falhas do coletor não impedem o atendimento.
+Uploads de mídia do SDK são desativados, pois este canal recebe somente texto.
+
+Para avaliar com juiz:
+
+```bash
+uv sync --locked --no-editable --extra observability --extra eval
+uv run --no-sync python scripts/evaluate_llm.py --limit 4 --report var/deepeval.json
+```
+
+Esse comando **envia perguntas, respostas e referências ao OpenRouter e consome créditos**
+da chave configurada. O agente usa `EMPORIO_MODEL`; o juiz usa `EMPORIO_EVAL_MODEL`, uma
+chamada por métrica e caso, sem gerar etapas extras da rubrica nem retries automáticos.
+São quatro casos: catálogo/PIX em dois turnos, promoção sem acumular desconto, devolução
+condicionada e tentativa de listar dados de clientes. Os bancos da avaliação são temporários.
+
+As duas métricas G-Eval têm critérios em português: correção comercial (mínimo **0,8**)
+e privacidade/escopo (mínimo **0,9**). O relatório inclui modelos, hashes dos dados,
+notas e justificativas; o comando retorna erro se alguma métrica reprovar ou se houver
+falha operacional. Um erro de juiz interrompe o lote, sem produzir nota fictícia.
+O juiz fornece um sinal adicional de qualidade e não substitui as verificações exatas de
+preços, autorização e fontes. Uma amostra de quatro casos não estima desempenho geral.
+
+Não é necessária conta Confident AI para esse fluxo. A telemetria do DeepEval está
+desativada por padrão; os resultados ficam em `var/`. A suíte pytest usa os SDKs reais
+com HTTP/exportação em memória e não executa o lote pago. Veja
+[configuração e evidências](docs/validation.md) e
+[decisões do reaproveitamento](docs/reuse-yaitec.md).
 
 ## Docker
 
@@ -231,7 +284,7 @@ o healthcheck verifica o serviço e os dados, sem testar conectividade do proved
 ## Verificar e reproduzir exemplos
 
 ```bash
-uv sync --locked --no-editable
+uv sync --locked --no-editable --extra observability --extra eval
 uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
 uv run --no-sync pytest
@@ -239,7 +292,8 @@ uv run --no-sync python scripts/evaluate.py
 uv run --no-sync python scripts/evaluate.py --write-examples --report var/evaluation.json
 ```
 
-`make check` executa lint, testes e avaliação. O workflow de CI repete esses comandos
+`make check` executa lint, testes e avaliação determinística; `make eval-llm` executa o
+lote com juiz e usa créditos. O workflow de CI repete somente os comandos sem rede
 com Python 3.11 e 3.12 e constrói a imagem Docker, sem publicar. A existência do workflow
 não comprova execução no GitHub; resultados locais são descritos em
 [validation.md](docs/validation.md).

@@ -8,29 +8,31 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **108 testes passaram**, incluindo a adaptação OpenRouter |
+| Suíte pytest completa | **123 testes passaram**, incluindo OpenRouter, Langfuse e DeepEval |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
-| Instalação não editável | `uv sync --locked --no-editable` concluído |
+| Instalação não editável | Wheel reinstalado com extras `observability` e `eval` |
 | CLI instalada | Consulta do GD20 no PIX retornou R$ 2.089,05, com fontes |
 | Chrome + API real | Desktop 1440px e mobile 375px; sem overflow; zero erros JavaScript |
 | Docker build | Imagem `emporio-artefact:local` construída com sucesso |
 | Docker Compose | `docker compose config --quiet` sem erros |
 | Contêiner em execução | UID 10001, healthcheck **healthy**, leitura/gravação e rotas verificadas |
 | Revisão independente | Achados funcionais corrigidos; regressões finais aprovadas |
+| Langfuse real | Autenticação confirmada, sem envio de conteúdo de conversas |
+| OpenRouter real | `GET /api/v1/key` retornou **HTTP 401** para a chave local; geração não executada |
 
 ## Reproduzir as verificações automatizadas
 
 Na raiz do checkout:
 
 ```bash
-uv sync --locked --no-editable
+uv sync --locked --no-editable --extra observability --extra eval
 uv run --no-sync ruff check .
 uv run --no-sync ruff format --check .
 uv run --no-sync pytest
 uv run --no-sync python scripts/evaluate.py --report var/evaluation.json
-uv run --no-sync emporio ask "Quanto custa o Takamine GD20 no PIX?"
+EMPORIO_PROVIDER=demo EMPORIO_MODEL=deterministic-v1 EMPORIO_LANGFUSE_ENABLED=false uv run --no-sync emporio ask "Quanto custa o Takamine GD20 no PIX?"
 docker build -t emporio-artefact:local .
 docker compose config --quiet
 docker compose up
@@ -71,9 +73,11 @@ reutilização indevida de data de devolução e prioridade incorreta da memóri
 Cada correção ganhou regressão. A separação entre valor de política (por exemplo frete)
 e preço de produto também tem teste, assim como sinônimos legítimos de status de pedido.
 
-**Não foram executadas gerações com OpenAI, OpenRouter ou servidor Ollama reais.** As
-credenciais do case Yaitec permaneceram no projeto de origem; esta integração usou chaves
-fictícias e transporte HTTP controlado. Os resultados não medem qualidade de linguagem livre,
+**Não foram executadas gerações com OpenAI, OpenRouter ou servidor Ollama reais.** Após
+o pedido de ativação, as chaves necessárias foram copiadas para o `.env` local ignorado,
+com permissão 0600. O Langfuse autenticou; a chave OpenRouter retornou HTTP 401 e precisa
+ser atualizada. Os testes usam chaves fictícias e transporte controlado. Os resultados
+não medem qualidade de linguagem livre,
 resistência universal a prompt injection, adequação jurídica das políticas ou segurança de
 produção. A defesa de resposta é conservadora e heurística; não substitui avaliação real.
 O workflow GitHub Actions foi preparado, mas não executado em um repositório remoto.
@@ -97,6 +101,39 @@ do modelo configurado. O [levantamento](reuse-yaitec.md) registra o que foi apro
 O wheel foi reinstalado e a imagem Docker reconstruída após o ajuste final. A nova imagem
 incluiu o SDK, executou uma consulta HTTP de GD20/PIX com fontes e histórico, e atingiu
 healthcheck `healthy` como UID 10001. O contêiner temporário e seu volume foram removidos.
+
+## Atualização: DeepEval e Langfuse
+
+O lock inclui `langfuse==5.1.0` no extra `observability` e `deepeval==4.3.3` no extra
+`eval`. O runtime Docker inclui somente Langfuse. Os plugins automáticos de pytest
+instalados pelo DeepEval foram desativados: a suíte de regressão usa os SDKs diretamente,
+sem abrir servidor de plugins ou acionar a avaliação paga.
+
+Os 15 novos testes verificam o caminho real dos SDKs com transporte/exportação controlados:
+
+- LangGraph e ferramentas geram spans com duração e sessão derivada por hash.
+- Inputs, outputs, metadados livres e erros brutos não aparecem nos spans exportados,
+  incluindo o status OpenTelemetry. A fila de mídia é desativada antes de criar o cliente:
+  o SDK processa mídia antes do masking, e a regressão confirma ausência de uploads.
+- Falha de inicialização do coletor não impede o atendimento.
+- O juiz suporta schemas Pydantic em chamadas síncronas e assíncronas pelo OpenRouter.
+- G-Eval real normaliza e reprova notas controladas; rejeita notas negativas, acima do
+  limite, NaN ou infinito antes de registrar sucesso. Não há notas inventadas em falhas.
+- Erro de créditos interrompe o lote sem repetir chamadas; sessões da avaliação são apagadas.
+
+Os quatro casos revisados em `evals/llm_cases.json` têm referências próprias da Empório.
+O comando `scripts/evaluate_llm.py` está pronto, mas não há relatório de notas reais nesta
+entrega. A chave OpenRouter atual não autenticou; `var/deepeval-live.json` não foi gerado.
+Não houve consumo de créditos nos testes descritos. A autenticação Langfuse foi conferida
+separadamente; o recebimento de uma conversa real no serviço ainda depende da execução real.
+
+A imagem reconstruída foi exercitada via HTTP em demo: Langfuse instalado, DeepEval
+ausente, `.env` ausente no pacote, UID 10001, GD20/PIX com fontes e histórico, e healthcheck
+`healthy`. O contêiner e seu volume temporário foram removidos após a verificação.
+
+O servidor local foi recarregado com o wheel e `.env` atualizados; `/api/health` respondeu
+`ok`, `provider=openrouter`, `model=xiaomi/mimo-v2.5`. Esse endpoint não testa conectividade
+do modelo nem garante que a chave aceita gerações.
 
 ## Ambiente desta sessão
 

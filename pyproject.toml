@@ -24,6 +24,14 @@ dependencies = [
 [project.scripts]
 emporio = "emporio.cli:app"
 
+[project.optional-dependencies]
+observability = [
+    "langfuse>=5.1,<6",
+]
+eval = [
+    "deepeval>=4.3.3,<5",
+]
+
 [dependency-groups]
 dev = ["pytest>=8,<10", "pytest-cov>=6,<8", "httpx>=0.28,<1", "ruff>=0.12,<1"]
 
@@ -33,7 +41,7 @@ packages = ["src/emporio"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-q --strict-markers"
+addopts = "-q --strict-markers -p no:deepeval -p no:rerunfailures -p no:asyncio"
 markers = ["live: integração com provedor real (requer configuração explícita)"]
 
 [tool.ruff]

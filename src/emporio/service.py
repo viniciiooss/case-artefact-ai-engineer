@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from emporio.agent import AgentRunner
 from emporio.catalog import Catalog
 from emporio.config import Settings
+from emporio.observability import Observability
 from emporio.retrieval import PolicyIndex
 from emporio.sessions import SessionStore
 from emporio.tools import make_tools
@@ -68,6 +69,7 @@ class ChatService:
         self.catalog = Catalog(settings.data_dir, settings.state_dir / "catalog.sqlite3")
         self.policies = PolicyIndex(settings.data_dir / "politicas_da_loja.pdf")
         self.sessions = SessionStore(settings.state_dir / "sessions.sqlite3")
+        self.observability = Observability(settings)
         self.model = model
         if model is None and settings.provider == "openai":
             from langchain_openai import ChatOpenAI
@@ -113,6 +115,9 @@ class ChatService:
     def create_session(self) -> dict:
         return self.sessions.create()
 
+    def close(self):
+        self.observability.close()
+
     def health(self) -> dict:
         counts = self.catalog.counts()
         return {
@@ -157,7 +162,11 @@ class ChatService:
             )
             try:
                 result = AgentRunner(model, tools, self.settings.max_tool_rounds).run(
-                    message, history, context, today.isoformat()
+                    message,
+                    history,
+                    context,
+                    today.isoformat(),
+                    config=self.observability.config(session_id),
                 )
             except Exception as exc:
                 failure = _provider_failure(exc)

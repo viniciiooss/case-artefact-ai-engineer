@@ -16,7 +16,7 @@ RUN apt-get update \
 
 COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
-RUN uv sync --locked --no-dev --no-editable \
+RUN uv sync --locked --no-dev --no-editable --extra observability \
     && mkdir -p /app/var \
     && chown emporio:emporio /app/var
 COPY data/ ./data/

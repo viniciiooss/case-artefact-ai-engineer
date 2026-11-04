@@ -108,6 +108,22 @@ tentativas do SDK desativadas são verificados por transporte HTTP controlado.
 O [levantamento de componentes](reuse-yaitec.md) distingue o que foi adaptado das
 evoluções possíveis em avaliação, observabilidade e retrieval.
 
+## Observabilidade e qualidade opcionais
+
+Langfuse observa o grafo por um callback novo a cada turno. O SDK registra spans de modelo
+e ferramentas, duração e tokens disponíveis, com sessão derivada por hash e tags da Empório.
+Uma máscara de exportação omite conteúdo e metadados livres. Erros de callback também são
+sanitizados no status OTel. Upload de mídia é desativado antes de construir o cliente, pois
+o SDK processa mídia antes de aplicar máscaras. O buffer é liberado no encerramento HTTP/CLI;
+falhas de telemetria são independentes da resposta do agente.
+
+DeepEval é instalado somente pelo extra `eval` e executado por `scripts/evaluate_llm.py`.
+O adaptador schema-aware usa OpenRouter como juiz; duas métricas G-Eval com etapas fixas
+verificam correção comercial e privacidade/escopo. A aplicação avaliada usa suas ferramentas
+reais e sessões isoladas; o relatório fica local, com notas, justificativas e hashes dos dados.
+Falhas operacionais e notas inválidas interrompem o lote. Isso complementa as regressões
+determinísticas de preços/autorização e não participa do caminho de resposta ao cliente.
+
 Para produção faltam autenticação forte, retenção e consentimento definidos, rate limit
 geral, HTTPS, gestão de segredos, operação/monitoramento, avaliações reais e integrações
 com ERP, transporte e equipe de atendimento. Pedidos históricos mantêm seus totais

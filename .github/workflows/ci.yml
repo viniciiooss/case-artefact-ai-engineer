@@ -24,7 +24,7 @@ jobs:
           version: "0.9.3"
           enable-cache: true
       - name: Instalar dependências do lock e pacote wheel
-        run: uv sync --locked --no-editable
+        run: uv sync --locked --no-editable --extra observability --extra eval
       - name: Lint
         run: uv run --no-sync ruff check .
       - name: Formatação

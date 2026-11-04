@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,19 @@ class Settings(BaseSettings):
     )
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     openrouter_site_url: str = "http://127.0.0.1:8000"
+    langfuse_enabled: bool = False
+    langfuse_public_key: SecretStr | None = Field(
+        default=None, validation_alias="LANGFUSE_PUBLIC_KEY"
+    )
+    langfuse_secret_key: SecretStr | None = Field(
+        default=None, validation_alias="LANGFUSE_SECRET_KEY"
+    )
+    langfuse_base_url: str = Field(
+        default="https://cloud.langfuse.com",
+        validation_alias=AliasChoices("LANGFUSE_BASE_URL", "LANGFUSE_HOST"),
+    )
+    langfuse_environment: str = "artefact-local"
+    eval_model: str = "openai/gpt-4.1-mini"
     ollama_url: str = "http://localhost:11434"
     max_tool_rounds: int = Field(default=4, ge=1, le=8)
     llm_timeout: float = Field(default=45, gt=0, le=120)
@@ -26,6 +39,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_provider(self):
+        if self.langfuse_enabled and any(
+            key is None or not key.get_secret_value().strip()
+            for key in (self.langfuse_public_key, self.langfuse_secret_key)
+        ):
+            raise ValueError("LANGFUSE_PUBLIC_KEY e LANGFUSE_SECRET_KEY são obrigatórias.")
         if self.provider == "openai" and not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY é obrigatória quando EMPORIO_PROVIDER=openai.")
         if self.provider == "openrouter" and (

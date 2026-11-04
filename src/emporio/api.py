@@ -42,7 +42,10 @@ def create_app(settings: Settings | None = None, service: ChatService | None = N
         application.state.service = service or await run_in_threadpool(
             lambda: ChatService(settings or Settings())
         )
-        yield
+        try:
+            yield
+        finally:
+            await run_in_threadpool(application.state.service.close)
 
     application = FastAPI(
         title="Empório da Música · Mel", lifespan=lifespan, docs_url=None, redoc_url=None

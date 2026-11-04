@@ -121,7 +121,15 @@ class AgentRunner:
             "rounds": state["rounds"] + 1,
         }
 
-    def run(self, question: str, history: list[dict], context: dict, today: str) -> dict:
+    def run(
+        self,
+        question: str,
+        history: list[dict],
+        context: dict,
+        today: str,
+        *,
+        config: dict | None = None,
+    ) -> dict:
         system = (
             SYSTEM_PROMPT
             + f"\nData local da loja: {today}.\nContexto mínimo: "
@@ -134,7 +142,7 @@ class AgentRunner:
         messages.append(HumanMessage(content=question))
         state = self.graph.invoke(
             {"messages": messages, "outputs": [], "traces": [], "rounds": 0},
-            config={"recursion_limit": self.max_rounds * 2 + 5},
+            config={**(config or {}), "recursion_limit": self.max_rounds * 2 + 5},
         )
         sources = {}
         new_context = context.copy()

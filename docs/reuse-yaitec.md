@@ -13,8 +13,8 @@ configuração, cliente LLM, grafo, retrieval, embeddings, guardrails e testes.
 | Erros de autenticação, modelo inválido e rate limit | **Adaptado.** Classificação sanitizada por status, incluindo créditos insuficientes e timeout. A CLI e o log operacional distinguem as causas; a API preserva sua mensagem genérica para o cliente. |
 | Geração JSON e roteamento de fallback | **Contrato diferente.** O agente da Artefact precisa executar ferramentas comerciais e verificar grants. Usa `ChatOpenRouter.bind_tools` no grafo existente, sem trocar silenciosamente de modelo nem substituir uma falha por demo. |
 | LangGraph e fontes anexadas no backend | **Padrão já presente.** A versão da Artefact mantém ferramentas tipadas e referências derivadas de seus resultados reais. |
-| DeepEval/GEval, juiz em português e avaliação por dimensões | **Próxima evolução útil.** Adaptar rubricas para preço, estoque, regras de pagamento, devolução e privacidade. As perguntas de planos/SLA da Yaitec não avaliam uma loja de instrumentos. |
-| Langfuse e captura de latência/tokens | **Próxima evolução útil.** Instrumentar geração/retrieval/ferramentas com dados mínimos e separar falha operacional de qualidade da resposta. A versão atual já oferece duração e resultado das ferramentas, sem exportação de traces. |
+| DeepEval/GEval, juiz em português e avaliação por dimensões | **Adaptado.** Extra `eval`, juiz OpenRouter com schemas validados, duas métricas em português e quatro casos próprios de preço, promoção, devolução e privacidade. Executa fora do atendimento, com relatório e falhas explícitas. |
+| Langfuse e captura de latência/tokens | **Adaptado.** Extra `observability`, callback nativo no grafo, spans de ferramentas/modelo, tokens quando disponíveis e hash por conversa. Conteúdo e erros brutos são omitidos; exportação em background e flush no encerramento. |
 | pgvector/HNSW, embeddings e top-k adaptativo | **Requer experimento próprio.** Os limiares de distância cosseno não se aplicam a scores BM25. Para oito páginas, manter a recuperação local atual e comparar alternativas quando houver evidência de falha ou expansão do corpus. |
 | Voz STT/TTS e seleção de modelo no navegador | **Fora da mudança atual.** São extensões possíveis, mas o escopo da Artefact pede mensagens de texto; configuração do provedor continua no backend. |
 | Guardrail baseado apenas em quantidade de fontes | **Validação atual preservada.** Uma fonte de política não sustenta um preço de produto ou status de pedido. A implementação atual também verifica valores e domínio das afirmações. |
@@ -50,10 +50,27 @@ OPENROUTER_API_KEY=sua-chave
 Depois:
 
 ```bash
-uv sync --locked --no-editable
+uv sync --locked --no-editable --extra observability
 uv run --no-sync emporio serve
 ```
 
-O projeto Yaitec foi apenas consultado. Nenhuma chave, documento da empresa, pergunta
-da base antiga ou credencial foi copiada. Os testes usam chaves fictícias e transporte
-controlado, sem consumo de créditos e sem envio aos provedores.
+Na primeira adaptação, o projeto Yaitec foi apenas consultado. Após o pedido explícito
+para configurar as integrações, somente as chaves necessárias de OpenRouter e Langfuse
+foram copiadas para o `.env` local, com permissão 0600 e ignorado por Git/Docker. O projeto
+de origem não foi alterado. Documentos da empresa e perguntas da base antiga não foram
+copiados. Os testes automatizados continuam usando chaves fictícias e transporte controlado.
+
+## Por que a integração permanece pequena
+
+Langfuse usa o callback já compatível com LangGraph, sem serviço adicional no Compose.
+O projeto das credenciais é reutilizado, com ambiente e tags próprios da Empório. DeepEval
+fica em um extra separado e usa G-Eval com etapas fixas, sem uma plataforma própria de
+avaliação, sem login na Confident AI e sem chamadas de juiz no fluxo de atendimento.
+
+O adaptador atende ao contrato schema-aware do
+[DeepEval](https://deepeval.com/guides/guides-using-custom-llms); as
+[métricas G-Eval](https://deepeval.com/docs/metrics-llm-evals) usam somente parâmetros
+referenciados em seus critérios. O tracing segue a
+[integração LangGraph](https://langfuse.com/integrations/frameworks/langchain) e o
+[masking de exportação](https://langfuse.com/docs/observability/features/masking)
+do SDK Langfuse 5. Os detalhes e limites observados estão em [validation.md](validation.md).

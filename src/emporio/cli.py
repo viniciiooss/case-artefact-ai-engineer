@@ -110,6 +110,7 @@ def ask(
         raise typer.Exit(1) from None
     finally:
         service.sessions.delete(session["session_id"])
+        service.close()
 
 
 @app.command()
@@ -164,6 +165,7 @@ def chat():
             SessionNotFound,
         ) as exc:
             _error(exc)
+    service.close()
 
 
 @app.command()

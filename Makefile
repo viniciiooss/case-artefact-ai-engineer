@@ -1,7 +1,10 @@
-.PHONY: sync serve chat ingest lint test eval examples check
+.PHONY: sync sync-eval serve chat ingest lint test eval eval-llm examples check
 
 sync:
-	uv sync --locked --no-editable
+	uv sync --locked --no-editable --extra observability
+
+sync-eval:
+	uv sync --locked --no-editable --extra observability --extra eval
 
 serve: sync
 	uv run --no-sync emporio serve
@@ -16,11 +19,14 @@ lint: sync
 	uv run --no-sync ruff check .
 	uv run --no-sync ruff format --check .
 
-test: sync
+test: sync-eval
 	uv run --no-sync pytest
 
 eval: sync
 	uv run --no-sync python scripts/evaluate.py
+
+eval-llm: sync-eval
+	uv run --no-sync python scripts/evaluate_llm.py --limit 4
 
 examples: sync
 	uv run --no-sync python scripts/evaluate.py --write-examples --report var/evaluation.json
