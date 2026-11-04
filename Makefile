@@ -1,4 +1,4 @@
-.PHONY: sync sync-eval serve chat ingest lint test eval eval-llm examples check
+.PHONY: sync sync-eval serve chat ingest lint test eval eval-llm validate-evals examples check
 
 sync:
 	uv sync --locked --no-editable --extra observability
@@ -28,7 +28,10 @@ eval: sync
 eval-llm: sync-eval
 	uv run --no-sync python scripts/evaluate_llm.py --limit 4
 
+validate-evals: sync
+	uv run --no-sync python scripts/evaluate_llm.py --cases evals/golden_emporio.jsonl --validate-only --limit 60
+
 examples: sync
 	uv run --no-sync python scripts/evaluate.py --write-examples --report var/evaluation.json
 
-check: lint test eval
+check: lint test eval validate-evals

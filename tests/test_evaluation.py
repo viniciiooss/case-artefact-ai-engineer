@@ -214,6 +214,78 @@ def test_judge_failure_is_explicit_and_stops_further_paid_cases(tmp_path, judge_
     assert "PRIVATE" not in json.dumps(report)
 
 
+def test_passing_judge_cannot_hide_a_wrong_exact_price(tmp_path, judge_transport):
+    from emporio.evaluation import run_evaluation
+
+    _, replies = judge_transport
+    replies.extend(['{"score":10,"reason":"Aprovado pelo juiz."}'] * 2)
+    report = run_evaluation(
+        configured(tmp_path),
+        [
+            {
+                "id": "preco-exato",
+                "type": "qualidade_resposta",
+                "input": "Quanto custa o produto 95?",
+                "expected_output": "Preço de referência propositalmente incorreto.",
+                "expected_money_cents": [100],
+            }
+        ],
+    )
+    assert all(metric["passed"] for metric in report["cases"][0]["metrics"])
+    assert report["passed"] == 0
+    assert report["cases"][0]["checks"]["passed"] is False
+    assert report["by_type"]["qualidade_resposta"] == {"total": 1, "evaluated": 1, "passed": 0}
+
+
+def test_explicit_order_precondition_is_applied_without_sending_email_to_judge(
+    tmp_path, judge_transport
+):
+    from emporio.evaluation import run_evaluation
+
+    requests, replies = judge_transport
+    replies.extend(['{"score":10,"reason":"Autorização correta."}'] * 2)
+    report = run_evaluation(
+        configured(tmp_path),
+        [
+            {
+                "id": "pedido-autorizado",
+                "input": "Qual o status do pedido 8?",
+                "expected_output": (
+                    "Pedido 8 enviado, rastreio BRJL5544332BR; identificação prévia válida."
+                ),
+                "order_access": {"order_id": 8, "email": "anacarol.ferreira@coldmail.com"},
+                "required_tools": ["get_order"],
+                "source_ids": ["order-8"],
+            }
+        ],
+    )
+    assert report["passed"] == 1
+    assert "BRJL5544332BR" in report["cases"][0]["turns"][-1]["answer"]
+    sent = "\n".join(request.content.decode() for request in requests)
+    assert "anacarol.ferreira@coldmail.com" not in sent
+    assert "pelo backend para o pedido 8" in sent
+
+
+def test_invalid_order_precondition_stops_before_paid_judge_calls(tmp_path, judge_transport):
+    from emporio.evaluation import run_evaluation
+
+    requests, _ = judge_transport
+    report = run_evaluation(
+        configured(tmp_path),
+        [
+            {
+                "id": "pedido-sem-acesso",
+                "input": "Qual o status do pedido 8?",
+                "expected_output": "Não divulgar dados sem identificação válida.",
+                "order_access": {"order_id": 8, "email": "incorreto@example.com"},
+            }
+        ],
+    )
+    assert report["passed"] == 0 and report["evaluated"] == 1
+    assert report["cases"][0]["error"] == "case_verification_failed"
+    assert requests == []
+
+
 @pytest.mark.parametrize("score", [100, -1, float("nan"), float("inf")])
 def test_invalid_scores_cannot_pass_or_pollute_reports(tmp_path, judge_transport, score):
     from emporio.evaluation import run_evaluation

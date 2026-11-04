@@ -13,7 +13,7 @@ configuração, cliente LLM, grafo, retrieval, embeddings, guardrails e testes.
 | Erros de autenticação, modelo inválido e rate limit | **Adaptado.** Classificação sanitizada por status, incluindo créditos insuficientes e timeout. A CLI e o log operacional distinguem as causas; a API preserva sua mensagem genérica para o cliente. |
 | Geração JSON e roteamento de fallback | **Contrato diferente.** O agente da Artefact precisa executar ferramentas comerciais e verificar grants. Usa `ChatOpenRouter.bind_tools` no grafo existente, sem trocar silenciosamente de modelo nem substituir uma falha por demo. |
 | LangGraph e fontes anexadas no backend | **Padrão já presente.** A versão da Artefact mantém ferramentas tipadas e referências derivadas de seus resultados reais. |
-| DeepEval/GEval, juiz em português e avaliação por dimensões | **Adaptado.** Extra `eval`, juiz OpenRouter com schemas validados, duas métricas em português e quatro casos próprios de preço, promoção, devolução e privacidade. Executa fora do atendimento, com relatório e falhas explícitas. |
+| DeepEval/GEval, juiz em português e avaliação por dimensões | **Adaptado.** Extra `eval`, juiz OpenRouter com schemas validados, duas métricas em português, quatro casos rápidos e banco golden de 60 casos próprios. Executa fora do atendimento, com relatório e falhas explícitas. |
 | Langfuse e captura de latência/tokens | **Adaptado.** Extra `observability`, callback nativo no grafo, spans de ferramentas/modelo, tokens quando disponíveis e hash por conversa. Conteúdo e erros brutos são omitidos; exportação em background e flush no encerramento. |
 | pgvector/HNSW, embeddings e top-k adaptativo | **Requer experimento próprio.** Os limiares de distância cosseno não se aplicam a scores BM25. Para oito páginas, manter a recuperação local atual e comparar alternativas quando houver evidência de falha ou expansão do corpus. |
 | Voz STT/TTS e seleção de modelo no navegador | **Fora da mudança atual.** São extensões possíveis, mas o escopo da Artefact pede mensagens de texto; configuração do provedor continua no backend. |
@@ -80,3 +80,18 @@ referenciados em seus critérios. O tracing segue a
 [integração LangGraph](https://langfuse.com/integrations/frameworks/langchain) e o
 [masking de exportação](https://langfuse.com/docs/observability/features/masking)
 do SDK Langfuse 5. Os detalhes e limites observados estão em [validation.md](validation.md).
+
+## Dataset e teste manual
+
+O banco de perguntas da Yaitec organiza 60 perguntas em seis grupos. A adaptação mantém
+esses grupos com dez casos próprios de cada: qualidade, contexto, fontes, alucinação,
+fora da base e injeção de instruções. O [golden JSONL](../evals/golden_emporio.jsonl)
+acrescenta referências e verificações exatas de valores, ferramentas, fontes e isolamento
+de autorização. Pré-condições de pedido são aplicadas pelo backend, sem passar e-mail ao juiz.
+
+O runner existente aceita JSON/JSONL, filtros por grupo e ID, resumo por grupo e
+validação sem modelos. Critérios, limiares e instruções constam em
+[evals/README.md](../evals/README.md). Não foi copiado o conteúdo comercial da Yaitec,
+seus modelos antigos, a média ponderada ou o painel de configuração: o banco usa as
+métricas e o fluxo existentes da Empório. O [roteiro manual](teste-manual.md) permite
+testar as mesmas regras pela interface.

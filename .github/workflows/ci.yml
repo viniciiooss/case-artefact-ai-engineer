@@ -33,6 +33,8 @@ jobs:
         run: uv run --no-sync pytest
       - name: Avaliação determinística HTTP
         run: uv run --no-sync python scripts/evaluate.py --report var/evaluation.json
+      - name: Validar golden dataset sem chamadas a modelos
+        run: uv run --no-sync python scripts/evaluate_llm.py --cases evals/golden_emporio.jsonl --validate-only --limit 60
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -47,5 +47,15 @@
   em rodadas com retestes direcionados, sem apresentar o resultado como um único lote 4/4.
   Resumo com origem de cada métrica em var/deepeval-validation-summary.json; relatórios
   anteriores preservados. Servidor final pronto para teste manual em http://127.0.0.1:8000.
+- Dataset Yaitec analisado: golden de oito casos e banco de 60 perguntas em seis grupos.
+  Criado golden Empório com 60 casos próprios, referências e checks exatos, filtros e
+  identificação prévia pelo backend; quatro casos rápidos e 12 regressões preservados.
+- Roteiro manual entregue em docs/teste-manual.md, incluindo o pedido fictício 8 e a
+  verificação de isolamento. Comandos e formato do banco em evals/README.md.
+- Validação desta atualização: 160 testes, Ruff e 12/12 regressões HTTP aprovados;
+  60 casos validados offline, com referências/identificações conferidas e revisão independente.
+  Wheel reinstalado e CLI de validação executada a partir do pacote instalado.
+  Nenhum caso novo foi enviado a modelos pagos nesta atualização; o banco de 60 está pronto
+  para execução explícita. Página e healthcheck locais continuam respondendo HTTP 200.
 - Ambiente macOS: uv exigiu acesso à configuração de rede fora do sandbox; instalação autorizada.
   Um atributo UF_HIDDEN no .pth da instalação editável bloqueou imports e foi removido localmente.

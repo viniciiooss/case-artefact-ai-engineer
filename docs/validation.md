@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **142 testes passaram**, incluindo OpenRouter, Langfuse e DeepEval |
+| Suíte pytest completa | **160 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval e dataset golden |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -22,6 +22,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 | Langfuse real | 70 observações com MiMo-V2.6-Pro recebidas, incluindo sete raízes `emporio.chat`; inputs/outputs vazios |
 | OpenRouter real | Chave autenticada com **HTTP 200**; primeiro lote real executado (2/4), seguido de correções e atualização dos modelos |
 | Casos reais com modelos atualizados | **4 casos validados com retestes direcionados**; não houve um único lote 4/4 |
+| Banco golden ampliado | **60 casos válidos**, seis grupos de dez; contratos, fontes e identificações conferidos offline |
 
 ## Reproduzir as verificações automatizadas
 
@@ -197,8 +198,31 @@ O juiz roda apenas no comando de avaliação; o chat manual usa somente o MiMo.
 
 O servidor local foi recarregado com o wheel e `.env` atualizados; `/api/health` respondeu
 `ok`, `provider=openrouter`, `model=xiaomi/mimo-v2.6-pro`, e a página inicial retornou HTTP 200.
-Esse endpoint não testa conectividade do modelo. O resultado da nova avaliação está
-registrado na atualização abaixo.
+Esse endpoint não testa conectividade do modelo. Os resultados reais e retestes estão
+descritos acima; a validação do banco ampliado está registrada abaixo.
+
+## Atualização: banco golden e roteiro manual
+
+O banco Yaitec foi consultado em modo leitura: oito registros JSONL e 60 perguntas em
+seis grupos. A adaptação `evals/golden_emporio.jsonl` tem 60 perguntas e referências
+próprias dos CSVs/manual da Empório; conteúdo comercial antigo não foi copiado.
+
+A suíte completa passou com **160 testes**. Os checks novos exercitam JSON/JSONL, entrada
+única/múltiplos turnos, filtros antes do limite, rejeição de duplicatas e dados vazios,
+fontes/páginas reais, identificação prévia de pedido, ausência de e-mail no pedido ao juiz
+e a reprovação de preço exato mesmo diante de duas notas 10 controladas do juiz.
+A CLI foi exercitada em subprocesso sem credenciais e com diretório temporário:
+`--validate-only` não cria relatório pago e rejeita ID inexistente antes do provedor.
+
+Ruff passou, as 12 regressões HTTP continuam aprovadas e os 60 casos foram validados
+sem geração. Revisão independente conferiu dados e referências do banco e não encontrou
+problema funcional importante. A validação foi acrescentada ao CI, mas o workflow remoto
+não foi executado nesta sessão.
+
+**Não foi executado o lote pago de 60 casos.** Os resultados reais anteriores são de
+quatro cenários e não comprovam aprovação do banco ampliado nem do esclarecimento atual
+da rubrica sobre citações de políticas públicas. O [roteiro manual](teste-manual.md)
+descreve perguntas, resultados esperados e identificação do pedido fictício 8.
 
 ## Ambiente desta sessão
 

@@ -121,6 +121,10 @@ o SDK processa mídia antes de aplicar máscaras. O buffer é liberado no encerr
 falhas de telemetria são independentes da resposta do agente.
 
 DeepEval é instalado somente pelo extra `eval` e executado por `scripts/evaluate_llm.py`.
+O carregador de JSON/JSONL e os checks exatos independem do SDK e da rede. O runner
+confere valores, fontes e ferramentas antes de consolidar a aprovação com as duas
+métricas; registra contagens por grupo e aplica identificação prévia pelo backend quando
+definida no caso. O modo `--validate-only` não instancia o agente ou o juiz.
 O adaptador schema-aware usa OpenRouter como juiz; duas métricas G-Eval com etapas fixas
 verificam correção comercial e privacidade/escopo. A aplicação avaliada usa suas ferramentas
 reais e sessões isoladas; o relatório fica local, com notas, justificativas e hashes dos dados.

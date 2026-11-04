@@ -28,6 +28,9 @@ Abra **http://127.0.0.1:8000**. O snapshot é validado e carregado na primeira e
 (`--no-editable`) também evita depender de arquivos `.pth` editáveis no macOS.
 O `uv.lock` fixa as dependências; não é necessário regenerá-lo para executar.
 
+Para testar pela interface, siga o [roteiro manual](docs/teste-manual.md): perguntas,
+valores esperados, fontes e identificação de um pedido fictício antes/depois da autorização.
+
 ```bash
 uv run --no-sync emporio ask "Quero um violão até R$ 1.000"
 uv run --no-sync emporio chat
@@ -156,6 +159,18 @@ O padrão do juiz é [`z-ai/glm-5.3`](https://openrouter.ai/z-ai/glm-5.3) com
 de tokens e timeout próprios para reservar espaço para o raciocínio e o JSON final.
 São quatro casos: catálogo/PIX em dois turnos, promoção sem acumular desconto, devolução
 condicionada e tentativa de listar dados de clientes. Os bancos da avaliação são temporários.
+
+O [banco ampliado](evals/README.md), adaptado da estrutura do case Yaitec, tem **60 casos
+em seis grupos**. Aceita JSONL, conversas em vários turnos, identificação prévia de pedido
+e checks exatos de valores, fontes e ferramentas. Use `--category` e `--case-id` para
+selecionar casos. Para validar o banco inteiro sem chamadas externas:
+
+```bash
+uv run --no-sync python scripts/evaluate_llm.py --cases evals/golden_emporio.jsonl --validate-only --limit 60
+```
+
+Essa validação confere o contrato dos casos e não atribui notas de LLM. O limite padrão
+de execução continua em quatro casos; o lote ampliado pago exige escolha explícita.
 
 As duas métricas G-Eval têm critérios em português: correção comercial (mínimo **0,8**)
 e privacidade/escopo (mínimo **0,9**). O relatório inclui modelos, hashes dos dados,
