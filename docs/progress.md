@@ -74,5 +74,20 @@
   Revisão independente sem falhas críticas/importantes; centralização vertical corrigida.
 - Wheel reinstalado e servidor principal atualizado, com assets conferidos. A migração
   preservou as quatro sessões e 12 mensagens existentes. Servidor temporário encerrado.
+- Novo pedido: remover a atribuição interna que reapareceu e reduzir os 12,7 s da resposta
+  de contato. Traces mostraram duas gerações como principal custo. Criado nó conservador
+  de FAQ para contatos/horários/endereço com busca real e zero chamadas ao modelo.
+- Cinco consultas locais de canal: mediana 13,21 ms. Modelo MiMo e endpoint Xiaomi mantidos;
+  raciocínio do atendimento em none, juiz separado em max. Metadados de fontes separados
+  dos fatos enviados ao modelo e atribuições internas tratadas sem remover manuais do produto.
+- Laya/Jev pesquisados nas fontes oficiais; não adicionados ao runtime para estas três
+  intenções fixas. Escolha e medições documentadas em docs/latency.md, sem benchmark comparativo.
+- Validação: 200 testes, Ruff, 12/12 cenários HTTP e regressão Chrome aprovados. Incompatibilidade
+  do demo com o payload novo reproduzida e corrigida com testes de pagamento/garantia.
+  Revisão final sem bloqueadores. Retestes MiMo preservaram preço/condições; consultas
+  generativas ainda variaram entre 3,8 e 14,1 s. Nenhum novo juiz ou lote pago de 60 casos.
+- Wheel atualizado e servidor principal reiniciado. A pergunta exata de contato no Chrome/API
+  real retornou em 21,19 ms, com zero gerações, fonte na página 6 e sem atribuição interna.
+  Reload/mobile aprovados; sessão de teste excluída e quatro conversas/14 mensagens preservadas.
 - Ambiente macOS: uv exigiu acesso à configuração de rede fora do sandbox; instalação autorizada.
   Um atributo UF_HIDDEN no .pth da instalação editável bloqueou imports e foi removido localmente.

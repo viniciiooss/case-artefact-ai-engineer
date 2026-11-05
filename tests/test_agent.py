@@ -94,6 +94,22 @@ def test_customer_answer_keeps_internal_references_in_sources(tmp_path, question
     assert any(source.get("page") for source in result["sources"])
 
 
+@pytest.mark.parametrize(
+    "question,expected,page",
+    [
+        ("Quais formas de pagamento vocês aceitam?", "parcela", 3),
+        ("Como funciona a garantia do fabricante?", "garantia", 4),
+    ],
+)
+def test_demo_renders_policy_facts_outside_the_public_faq(tmp_path, question, expected, page):
+    svc = service(tmp_path)
+    result = svc.chat(svc.create_session()["session_id"], question)
+    assert result["execution_path"] == "agent"
+    assert expected in result["message"].lower()
+    assert "não tenho essa informação" not in result["message"].lower()
+    assert any(source.get("page") == page for source in result["sources"])
+
+
 def test_accessories_and_out_of_scope_are_handled_without_fake_stock(tmp_path):
     svc = service(tmp_path)
     session = svc.create_session()["session_id"]

@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **167 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval e dataset golden |
+| Suíte pytest completa | **200 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden e rota de FAQ |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -289,6 +289,42 @@ corrigido, com regressão no navegador.
 Wheel reinstalado e servidor principal atualizado em `http://127.0.0.1:8000`, mantendo
 MiMo-V2.6-Pro via OpenRouter. A migração local preservou as quatro sessões e 12 mensagens
 existentes; os assets servidos foram conferidos contra os arquivos verificados.
+
+## Atualização: contato rápido e atribuições internas
+
+O caso relatado foi reproduzido a partir da pergunta e da resposta salva: **12.669 ms**,
+com duas gerações nos traces (7.030 e 5.604 ms) e menção ao manual no texto. O novo nó
+de FAQ consulta as fontes do turno e responde a contato, horário e endereço sem geração.
+Cinco consultas de canal tiveram mediana **13,21 ms** (12,71–17,99 ms), com zero chamadas
+ao modelo. Perguntas mistas ou sem fatos continuam no agente.
+
+A geração recebe `policy_context` com os trechos íntegros, mantendo o envelope de
+fontes no backend. A limpeza de atribuições preserva manual original, número de série,
+manual do fabricante e condições de devolução. O runtime OpenRouter usa esforço
+`none`; testes do SDK confirmam o envio e a omissão do parâmetro com `default`.
+Modelos, endpoint, limites de avaliação e esforço `max` do juiz foram mantidos.
+
+Validação final desta alteração: **200 testes passaram**, **12/12 cenários HTTP**,
+Ruff e regressão Chrome de negrito, listas, latência, XSS, fontes, histórico e alinhamento.
+A revisão encontrou uma incompatibilidade do demo com o payload sem metadados; testes
+de pagamento e garantia falharam antes do ajuste e passaram após consumir `policy_context`.
+A conferência independente final não apontou bloqueadores adicionais.
+
+O MiMo real preservou os valores da promoção e as condições de devolução nos retestes,
+sem juiz. O reteste após a separação de metadados levou **14.064 ms** e reportou zero
+tokens de raciocínio; não se afirma ganho garantido nas respostas generativas. Fontes
+da página 4 e exigência de manuais foram preservadas. Não foi executado o lote pago de
+60 casos. A [análise de latência](latency.md) registra a amostra, os relatórios locais e
+a decisão sobre Laya/Jev. Docker não foi reconstruído nesta atualização.
+
+Wheel reinstalado e servidor principal reiniciado na porta 8000. O Chrome contra a API
+real repetiu exatamente “qual o canal de atendimento”: **21,19 ms**, `policy_faq`, zero
+gerações, fonte na página 6 e nenhuma menção ao manual no corpo. Negrito, latência após
+reload e viewport móvel de 375 px passaram, sem erros JavaScript ou overflow. A sessão
+de teste foi criada explicitamente e excluída ao final; um digest das mensagens confirmou
+a preservação das **quatro conversas e 14 mensagens** existentes. Evidências locais:
+`var/chat-speed-live.json`, `var/chat-speed-live-desktop.png`,
+`var/chat-speed-live-mobile.png` e `var/latency-session-preservation.json`.
 
 ## Ambiente desta sessão
 

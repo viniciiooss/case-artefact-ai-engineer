@@ -107,7 +107,7 @@ def make_tools(catalog, policies, sessions, session_id: str, question: str, toda
 
     @tool
     def search_policies(query: Annotated[str, Field(min_length=1, max_length=300)]) -> dict:
-        """Recupera trechos reais do PDF da loja com seção e página: horários, endereço,
+        """Consulta políticas atuais da loja: horários, endereço,
         pagamentos, frete, devoluções, garantia, privacidade e contatos.
         """
         return {"sources": policies.search(query)}
@@ -119,7 +119,7 @@ def make_tools(catalog, policies, sessions, session_id: str, question: str, toda
         received_at: date | None = None,
         purchased_at: date | None = None,
     ) -> dict:
-        """Aplica prazos do manual usando datas reais informadas pelo cliente. Não autoriza
+        """Aplica as regras da loja usando datas reais informadas pelo cliente. Não autoriza
         reembolso. Se canal/data faltarem, pede informações; datas futuras são rejeitadas.
         """
         result = evaluate_return(

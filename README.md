@@ -94,6 +94,12 @@ requisição inválida, limite de uso e timeout sem propagar mensagens brutas de
 Veja a [análise do reaproveitamento](docs/reuse-yaitec.md) e a
 [integração oficial](https://openrouter.ai/blog/tutorials/langchain-chatopenrouter-setup/).
 
+Perguntas simples sobre contatos, horário e endereço têm uma rota conservadora no
+LangGraph: consultam as políticas do turno e formatam os fatos sem chamadas à LLM.
+Perguntas mistas ou sem informação suficiente seguem para o agente. No OpenRouter, o
+atendimento usa `reasoning.effort=none` por padrão; o juiz mantém `max`. A
+[análise de latência](docs/latency.md) registra medições, limites e a decisão sobre Laya/Jev.
+
 | Variável | Padrão | Finalidade |
 | --- | --- | --- |
 | `EMPORIO_PROVIDER` | `demo` | `demo`, `openai`, `openrouter` ou `ollama` |
@@ -108,6 +114,7 @@ Veja a [análise do reaproveitamento](docs/reuse-yaitec.md) e a
 | `EMPORIO_OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Endpoint do OpenRouter |
 | `EMPORIO_OPENROUTER_SITE_URL` | `http://127.0.0.1:8000` | Identificação da aplicação no OpenRouter |
 | `EMPORIO_OPENROUTER_PROVIDER_ORDER` | `[]` | Endpoints priorizados só no atendimento, por exemplo `["Xiaomi"]`; fallback desativado |
+| `EMPORIO_ATTENDANT_REASONING_EFFORT` | `none` | Raciocínio do atendimento OpenRouter; `default` omite o parâmetro e mantém o padrão do provedor |
 | `EMPORIO_LANGFUSE_ENABLED` | `false` | Ativa tracing com as chaves Langfuse configuradas |
 | `LANGFUSE_BASE_URL` | `https://cloud.langfuse.com` | Região/servidor do projeto; aceita o alias `LANGFUSE_HOST` |
 | `EMPORIO_LANGFUSE_ENVIRONMENT` | `artefact-local` | Ambiente das observações da Empório |
@@ -118,7 +125,7 @@ Veja a [análise do reaproveitamento](docs/reuse-yaitec.md) e a
 
 `OPENAI_API_KEY` é exigida em `openai`; `OPENROUTER_API_KEY`, em `openrouter`.
 As chaves são independentes. Não versione `.env` nem bancos de sessão.
-Nos modos OpenAI e OpenRouter, mensagens, contexto e resultados de ferramentas são enviados à API;
+Nos turnos que usam LLM em OpenAI e OpenRouter, mensagens, contexto e resultados de ferramentas são enviados à API;
 em Ollama, ao servidor configurado. E-mail e token de sessão não integram o schema da LLM.
 
 ## Observabilidade e avaliação de LLM
@@ -222,9 +229,14 @@ curl -X POST http://127.0.0.1:8000/api/sessions/SESSION_ID/order-access \
 
 O segundo comando exemplifica identificação explícita com e-mail fictício. Só depois
 dela o mesmo token pode consultar aquele pedido. A resposta do chat traz `message`,
-`sources`, `tools`, `provider`, `model`, `latency_ms` e `context`; a UI apresenta as fontes
+`sources`, `tools`, `provider`, `model`, `latency_ms`, `context`, `execution_path` e
+`model_calls`; a UI apresenta as fontes
 e o tempo de resposta em ms/segundos. O histórico preserva `latency_ms`; mensagens antigas
 sem medição retornam `null` e não exibem um tempo estimado.
+`execution_path=policy_faq` indica a resposta pública sem geração (`model_calls=0`);
+`agent` indica o ciclo habitual. `model` informa o modelo configurado, mesmo quando
+nenhuma geração foi necessária. Esses dois campos de execução são do turno, sem
+migração adicional do histórico.
 
 | Método e rota | Uso |
 | --- | --- |

@@ -94,6 +94,11 @@ class ChatService:
                 temperature=0.2,
                 max_tokens=1600,
                 # O SDK nativo usa milissegundos, diferente do ChatOpenAI.
+                reasoning=(
+                    {"effort": settings.attendant_reasoning_effort}
+                    if settings.attendant_reasoning_effort != "default"
+                    else None
+                ),
                 timeout=max(1, int(settings.llm_timeout * 1000)),
                 max_retries=0,
                 # Sem override, o SDK adota backoff de até uma hora mesmo com max_retries=0.

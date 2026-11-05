@@ -163,8 +163,9 @@ def _intercept_httpx(monkeypatch, handler):
 
 
 @pytest.mark.parametrize("provider_order", [[], ["Xiaomi"]])
+@pytest.mark.parametrize("reasoning_effort", ["none", "default"])
 def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_timeout(
-    tmp_path, monkeypatch, provider_order
+    tmp_path, monkeypatch, provider_order, reasoning_effort
 ):
     from langchain_openrouter import ChatOpenRouter
 
@@ -212,6 +213,7 @@ def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_t
         provider="openrouter",
         OPENROUTER_API_KEY="test-router-key",
         openrouter_provider_order=provider_order,
+        attendant_reasoning_effort=reasoning_effort,
         data_dir=Path(__file__).resolve().parents[1] / "data",
         state_dir=tmp_path,
         _env_file=None,
@@ -234,6 +236,10 @@ def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_t
     else:
         assert not first["provider"].get("order")
     assert first["max_tokens"] == 1600
+    if reasoning_effort == "none":
+        assert first.get("reasoning") == {"effort": "none"}
+    else:
+        assert "reasoning" not in first
     assert first["model"] == "xiaomi/mimo-v2.6-pro"
     assert "response_format" not in first
     assert any(t["function"]["name"] == "get_order" for t in first["tools"])

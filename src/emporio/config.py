@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     max_tool_rounds: int = Field(default=4, ge=1, le=8)
     llm_timeout: float = Field(default=45, gt=0, le=120)
+    attendant_reasoning_effort: Literal[
+        "default", "none", "minimal", "low", "medium", "high", "xhigh", "max"
+    ] = "none"
     history_turns: int = Field(default=10, ge=1, le=30)
     timezone: str = "America/Campo_Grande"
 

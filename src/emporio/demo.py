@@ -453,12 +453,12 @@ class DemoModel:
         if "ticket" in payload:
             ticket = payload["ticket"]
             return f"Seu protocolo é {ticket['ticket_id']}. " + ticket["message"]
-        sources = payload.get("sources", [])
-        if not sources:
+        policy_context = payload.get("policy_context", [])
+        if not policy_context:
             return "Não tenho essa informação confirmada. A equipe pode verificar pelo atendimento."
         passages = []
-        for source in sources[:2]:
-            excerpt = re.sub(r"^\d+(?:\.\d+)*\.?\s+", "", source["excerpt"])
+        for text in policy_context[:2]:
+            excerpt = re.sub(r"^\d+(?:\.\d+)*\.?\s+", "", text)
             if len(excerpt) > 1100:
                 excerpt = excerpt[:1100].rsplit(" ", 1)[0] + " […]"
             passages.append(excerpt.replace(" • ", "\n• "))

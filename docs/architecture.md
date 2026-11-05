@@ -10,9 +10,12 @@ flowchart TD
     CLI[CLI Typer] --> Service[ChatService]
     HTTP --> Service
     Service --> Sessions[(SQLite de sessões)]
-    Service --> Graph[LangGraph: modelo → ferramentas → modelo]
+    Service --> Graph[LangGraph: roteamento conservador]
+    Graph --> FAQ[Contato / horário / endereço: consulta + formatação]
+    FAQ --> BM25
+    Graph --> Agent[Modelo → ferramentas → modelo]
     Provider[OpenAI / OpenRouter / Ollama / demo explícito] --> Graph
-    Graph --> Tools[Ferramentas tipadas / autorização no servidor]
+    Agent --> Tools[Ferramentas tipadas / autorização no servidor]
     Tools --> SQL[SQL parametrizado + cálculo em centavos]
     SQL --> Catalog[(SQLite do catálogo)]
     CSV[Seis CSVs preservados] --> Ingest[Validação transacional / hash]
@@ -28,13 +31,21 @@ flowchart TD
    sessão para impedir respostas concorrentes na mesma conversa.
 2. O serviço lê a janela de histórico (10 turnos por padrão), o contexto mínimo e a data
    local de Campo Grande. Histórico pode resolver “o primeiro”; não é fonte de preços.
-3. O modelo produz resposta ou chamadas de ferramentas. O grafo executa ferramentas
+3. Perguntas simples de contato, horário ou endereço passam por uma lista conservadora
+   de intenções e vocabulário. O nó `public_info` executa `search_policies` e extrai os
+   fatos das fontes recuperadas, sem LLM; não guarda um cache de respostas. Perguntas
+   mistas, privadas, com ações ou sem fatos suficientes seguem para o modelo.
+   O modelo produz resposta ou chamadas de ferramentas. O grafo executa ferramentas
    conhecidas com validação Pydantic, registra duração/resultado e retorna observações
    ao modelo. O padrão tem ação e observação, sem salvar raciocínio interno.
    Se a resposta final não tiver evidência suficiente, uma única tentativa de correção
    solicita nova consulta e preserva o orçamento total de rodadas. Valores de economia
    são calculados no backend e só sustentam menções a desconto, não o preço do produto.
 4. Fontes vêm dos resultados das ferramentas, com IDs, referências e páginas reais.
+   O modelo recebe os fatos e os trechos integrais em `policy_context`, sem o envelope
+   de metadados `sources`. O backend mantém os resultados completos para a verificação
+   de evidência, avaliação e área de fontes. A apresentação remove atribuições internas
+   reconhecíveis; condições sobre o manual físico do produto continuam no texto.
    O serviço salva mensagens públicas finais e contexto mínimo: IDs de produtos e canal,
    motivo e datas de uma devolução. O trace completo de argumentos e observações não é
    persistido; credenciais e cadeia de pensamento não integram o histórico público.
@@ -48,6 +59,9 @@ O ciclo segue o [quickstart do LangGraph](https://docs.langchain.com/oss/python/
 O contrato de ação se apoia em [function calling](https://developers.openai.com/api/docs/guides/function-calling)
 e na [integração ChatOllama](https://docs.langchain.com/oss/python/integrations/chat/ollama).
 São referências de implementação; a qualidade final depende do modelo escolhido.
+O raciocínio do atendimento OpenRouter é configurável e usa `none` por padrão;
+o juiz de avaliação continua separado, com `max`. Veja as
+[medições e decisões de latência](latency.md), incluindo os limites da rota de FAQ.
 
 ## Ferramentas e fronteiras
 

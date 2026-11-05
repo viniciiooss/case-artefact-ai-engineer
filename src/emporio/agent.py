@@ -11,9 +11,24 @@ from langgraph.graph.message import add_messages
 from pydantic import ValidationError
 
 from emporio.grounding import supported_answer
+from emporio.presentation import customer_answer
 from emporio.prompts import SYSTEM_PROMPT
+from emporio.public_info import QUERIES, public_intent, public_reply
 
 logger = logging.getLogger(__name__)
+
+
+def model_payload(payload: dict) -> dict:
+    """Proveniência fica no backend; a geração recebe fatos, sem IDs/páginas/arquivos."""
+    result = {key: value for key, value in payload.items() if key != "sources"}
+    passages = [
+        source["excerpt"]
+        for source in payload.get("sources", [])
+        if source.get("kind") == "policy" and source.get("excerpt")
+    ]
+    if passages:
+        result["policy_context"] = passages
+    return result
 
 
 class AgentState(TypedDict):
@@ -21,6 +36,8 @@ class AgentState(TypedDict):
     outputs: Annotated[list[dict], add]
     traces: Annotated[list[dict], add]
     rounds: int
+    model_calls: int
+    public_source_ids: list[str]
 
 
 class AgentRunner:
@@ -32,7 +49,13 @@ class AgentRunner:
         graph.add_node("model", self._model)
         graph.add_node("tools", self._tools)
         graph.add_node("limit", self._limit)
-        graph.add_edge(START, "model")
+        graph.add_node("public_info", self._public_info)
+        graph.add_conditional_edges(
+            START, self._entry, {"model": "model", "public_info": "public_info"}
+        )
+        graph.add_conditional_edges(
+            "public_info", self._after_public_info, {"model": "model", "done": END}
+        )
         graph.add_conditional_edges(
             "model", self._next, {"tools": "tools", "done": END, "limit": "limit"}
         )
@@ -46,7 +69,42 @@ class AgentRunner:
             raise TypeError("O provedor não retornou uma mensagem de assistente válida.")
         if response.invalid_tool_calls or (not response.tool_calls and not response.text.strip()):
             raise ValueError("O provedor retornou uma chamada malformada ou resposta vazia.")
-        return {"messages": [response.model_copy(update={"id": uuid4().hex})]}
+        return {
+            "messages": [response.model_copy(update={"id": uuid4().hex})],
+            "model_calls": state["model_calls"] + 1,
+        }
+
+    def _entry(self, state: AgentState) -> str:
+        last = state["messages"][-1]
+        if (
+            isinstance(last, HumanMessage)
+            and "search_policies" in self.tools
+            and public_intent(last.text)
+        ):
+            return "public_info"
+        return "model"
+
+    def _public_info(self, state: AgentState) -> dict:
+        intent = public_intent(state["messages"][-1].text)
+        call = AIMessage(
+            content="",
+            tool_calls=[
+                {"name": "search_policies", "args": {"query": QUERIES[intent]}, "id": uuid4().hex}
+            ],
+        )
+        result = self._tools({**state, "messages": [*state["messages"], call]})
+        payload = result["outputs"][-1]["result"]
+        reply = public_reply(intent, payload.get("sources", [])) if "error" not in payload else None
+        result["messages"] = [call, *result["messages"]]
+        result["public_source_ids"] = []
+        if reply:
+            answer, ids = reply
+            result["messages"].append(AIMessage(content=answer))
+            result["public_source_ids"] = ids
+        return result
+
+    def _after_public_info(self, state: AgentState) -> str:
+        return "done" if state["public_source_ids"] else "model"
 
     def _next(self, state: AgentState) -> str:
         if not state["messages"][-1].tool_calls:
@@ -109,7 +167,7 @@ class AgentRunner:
             )
             messages.append(
                 ToolMessage(
-                    content=json.dumps(payload, ensure_ascii=False, default=str),
+                    content=json.dumps(model_payload(payload), ensure_ascii=False, default=str),
                     tool_call_id=call["id"],
                     name=call["name"],
                 )
@@ -138,11 +196,19 @@ class AgentRunner:
         messages = [SystemMessage(content=system)]
         for entry in history:
             cls = HumanMessage if entry["role"] == "user" else AIMessage
-            messages.append(cls(content=entry["content"]))
+            content = entry["content"]
+            messages.append(cls(content=customer_answer(content) if cls is AIMessage else content))
         messages.append(HumanMessage(content=question))
         graph_config = {**(config or {}), "recursion_limit": self.max_rounds * 2 + 5}
         state = self.graph.invoke(
-            {"messages": messages, "outputs": [], "traces": [], "rounds": 0},
+            {
+                "messages": messages,
+                "outputs": [],
+                "traces": [],
+                "rounds": 0,
+                "model_calls": 0,
+                "public_source_ids": [],
+            },
             config=graph_config,
         )
         if state["rounds"] < self.max_rounds and not supported_answer(
@@ -194,8 +260,14 @@ class AgentRunner:
                 "Tente informar o modelo ou identificar o pedido para eu consultar."
             )
         return {
-            "message": answer,
-            "sources": list(sources.values()),
+            "message": customer_answer(answer),
+            "sources": (
+                [sources[source_id] for source_id in state["public_source_ids"]]
+                if state["public_source_ids"]
+                else list(sources.values())
+            ),
             "tools": state["traces"],
             "context": new_context,
+            "execution_path": "policy_faq" if state["public_source_ids"] else "agent",
+            "model_calls": state["model_calls"],
         }
