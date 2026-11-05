@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **205 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden e rota de FAQ |
+| Suíte pytest completa | **226 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden e rota de FAQ |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -359,6 +359,48 @@ confirmou o juiz Luna e endpoint Anthropic. O digest das mensagens confirmou a
 preservação das quatro conversas e 16 mensagens existentes no momento da troca.
 A revisão independente não encontrou problemas concretos. Evidências locais:
 `var/haiku-luna-runtime.json` e `var/model-switch-preservation.json`.
+
+## Atualização: listagem por orçamento e correção de rascunhos
+
+A resposta reportada citava uma lista anterior inexistente e cotava apenas o F310 no
+PIX. O histórico confirmou que era o primeiro turno. A instrumentação de uma sessão
+temporária com o Haiku reproduziu a causa: uma lista válida foi rejeitada porque seu
+cabeçalho repetia “até R$ 1.000”, valor que era filtro de busca, não preço de produto.
+A correção mantinha o rascunho na conversa e direcionava para `quote_product`, causando
+referências a uma resposta não exibida e perda da intenção original.
+
+O guard agora distingue rótulos conservadores de orçamento dos valores comerciais.
+O teto precisa vir de uma busca bem-sucedida; preços, frete, descontos e reembolsos
+continuam sujeitos às fontes. Contagens do rótulo são verificadas contra a quantidade
+retornada e sua posição, sem aceitar IDs de produto como contadores. O reparo remove
+somente o último rascunho, preserva o protocolo das ferramentas e pede uma nova resposta
+à pergunta original. Preços de catálogo não precisam de cálculo de cotação.
+
+O reteste também encontrou um ukulele cujo texto menciona “violão” quando o modelo
+omitia a categoria. A busca infere uma única família cadastrada citada na query, sem
+sobrescrever categoria explícita ou perder marca/orçamento. Testes com singular/plural
+confirmaram os 12 violões válidos e a exclusão do ukulele #128.
+
+Validação: **226 testes**, Ruff e **12/12 cenários HTTP** passaram. As regressões falharam
+antes das respectivas correções; a revisão independente confirmou os casos de orçamento,
+IDs, contagens e dinheiro sem novos bloqueadores. O caso foi adicionado separadamente em
+`evals/regressions.jsonl`, sem alterar os 60 casos originais.
+
+A pergunta real retornou uma lista de dez violões, com fontes e duas gerações, em uma
+observação de **4.539 ms**, sem correção indevida. O reteste com juiz Luna aprovou o caso:
+**0,8 comercial** e **1,0 privacidade/escopo**. O juiz observou que a seleção limitada
+poderia ser apresentada com mais clareza; não foi declarado um resultado de 60/60.
+Evidências locais: `var/catalog-answer-before-fix.json`, `var/catalog-answer-final.json`
+e `var/deepeval-catalog-budget-fix.json`. Os dados originais e os modelos foram preservados.
+
+O wheel final foi reinstalado e o servidor principal atualizado. O Chrome contra a API
+real repetiu a pergunta e recebeu **dez violões**, somente com fontes dessa categoria,
+em **5.154,78 ms** e duas gerações. Não houve cotação PIX nem referência a lista anterior.
+Negrito, lista, latência após reload e viewport de 375 px passaram, sem overflow ou erros
+JavaScript. A sessão de teste foi criada explicitamente e excluída; um digest confirmou
+as quatro conversas e 16 mensagens preexistentes preservadas. Evidências locais:
+`var/catalog-fix-live.json`, `var/catalog-fix-live-desktop.png`,
+`var/catalog-fix-live-mobile.png` e `var/catalog-fix-preservation.json`.
 
 ## Ambiente desta sessão
 

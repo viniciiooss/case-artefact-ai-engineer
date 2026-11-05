@@ -42,6 +42,94 @@ def test_product_recommendation_really_applies_budget(tmp_path):
     assert "search_products" in [t["name"] for t in result["tools"]]
 
 
+def test_retrieved_product_list_can_repeat_its_budget_without_triggering_a_quote(tmp_path):
+    from langchain_core.messages import AIMessage
+
+    draft = (
+        "Algumas opções de violões disponíveis até **R$ 1.000**:\n"
+        "- Tagima Memphis AC-39: **R$ 429,90**.\n"
+        "- Rozini RC-104: **R$ 459,90**."
+    )
+    model = ScriptedModel(
+        [
+            tool_call(
+                "search_products",
+                {"category": "Violões", "max_price_brl": 1000, "limit": 2},
+            ),
+            AIMessage(content=draft),
+            AIMessage(content="Os preços da lista anterior foram confirmados."),
+        ]
+    )
+    svc = service(tmp_path, model)
+    sid = svc.create_session()["session_id"]
+    result = svc.chat(sid, "Quais violões disponíveis custam até R$ 1.000?")
+    assert result["message"] == draft
+    assert result["model_calls"] == 2
+    assert [t["name"] for t in result["tools"]] == ["search_products"]
+    assert {s["id"] for s in result["sources"]} == {"product-83", "product-85"}
+    assert svc.sessions.history(sid)[-1]["content"] == draft
+
+
+@pytest.mark.parametrize(
+    "answer,expected",
+    [
+        ("Opções até R$ 1.000: Tagima AC-39 por R$ 429,90.", True),
+        ("Com orçamento de **R$ 1.000**, o Tagima AC-39 custa R$ 429,90.", True),
+        ("Até R$ 1.000: o Tagima AC-39 custa R$ 1.000.", False),
+        ("O Tagima AC-39 custa R$ 1.000.", False),
+        ("Violões até R$ 2.000: Tagima AC-39 por R$ 429,90.", False),
+        ("O frete custa até R$ 1.000.", False),
+        ("O desconto PIX vai até R$ 1.000.", False),
+        ("Posso reembolsar no máximo R$ 1.000.", False),
+        ("O Tagima AC-39 custa até R$ 1.000.", False),
+        ("Opções até R$ 1.000 de frete.", False),
+        ("O preço do violão Takamine GD20 é de até R$ 1.000.", False),
+        ("Produto 95 por até R$ 1.000.", False),
+        ("O modelo 95 por no máximo R$ 1.000.", False),
+        ("Produto 1 por até R$ 1.000.", False),
+        ("Encontrei 1 opção até R$ 1.000: Tagima AC-39 por R$ 429,90.", True),
+        ("Encontrei 95 opções até R$ 1.000: Tagima AC-39 por R$ 429,90.", False),
+    ],
+)
+def test_budget_is_evidence_for_a_limit_but_never_an_invented_product_price(
+    tmp_path, answer, expected
+):
+    from emporio.grounding import supported_answer
+
+    svc = service(tmp_path)
+    outputs = [
+        {
+            "name": "search_products",
+            "args": {"max_price_brl": 1000},
+            "result": {"products": [svc.catalog.get_product(83)], "sources": []},
+        }
+    ]
+    outputs.append({"result": {"product": svc.catalog.get_product(95)}})
+    assert supported_answer(answer, outputs) is expected
+
+
+def test_discarded_draft_is_not_a_previous_customer_visible_answer_during_repair(tmp_path):
+    from langchain_core.messages import AIMessage, ToolMessage
+
+    bad_draft = "O Tagima AC-39 custa R$ 1,00."
+    corrected = "Algumas opções: Tagima AC-39 por R$ 429,90 e Rozini RC-104 por R$ 459,90."
+    model = ScriptedModel(
+        [
+            tool_call("search_products", {"category": "Violões", "limit": 2}),
+            AIMessage(content=bad_draft),
+            AIMessage(content=corrected),
+        ]
+    )
+    svc = service(tmp_path, model)
+    sid = svc.create_session()["session_id"]
+    result = svc.chat(sid, "Quais violões disponíveis custam até R$ 1.000?")
+    repair_input = model.calls[-1]
+    assert all(m.text != bad_draft for m in repair_input)
+    assert any(isinstance(m, ToolMessage) for m in repair_input)
+    assert result["message"] == corrected
+    assert len(svc.sessions.history(sid)) == 2
+
+
 def test_promotion_and_pix_do_not_stack_in_conversation(tmp_path):
     svc = service(tmp_path)
     result = svc.chat(svc.create_session()["session_id"], "Quanto fica o Kalani KAL-700T no PIX?")

@@ -219,15 +219,19 @@ class AgentRunner:
                 {
                     **state,
                     "messages": [
-                        *state["messages"],
+                        # O rascunho rejeitado nunca foi visto pelo cliente.
+                        *state["messages"][:-1],
                         SystemMessage(
                             content=(
-                                "A resposta anterior contém afirmações sem evidência "
-                                "suficiente neste turno. Consulte a ferramenta adequada "
-                                "antes de responder. Para preço, PIX ou parcelas, use "
-                                "quote_product com o produto do contexto e apresente "
-                                "somente valores retornados. Se faltar informação, "
-                                "peça esclarecimento."
+                                "A verificação interna não confirmou todas as afirmações. "
+                                "Responda novamente à última pergunta do cliente, mantendo "
+                                "o assunto e usando evidências das ferramentas deste turno. "
+                                "Preços de catálogo podem vir de search_products/get_product. "
+                                "Para calcular PIX, parcelas, quantidades ou frete, use "
+                                "quote_product. Não substitua uma lista solicitada por uma "
+                                "cotação de um só produto. Se faltar informação, pergunte. "
+                                "Esta verificação é interna: não mencione revisão, rascunhos "
+                                "ou respostas anteriores que o cliente não recebeu."
                             )
                         ),
                     ],

@@ -28,7 +28,7 @@ para testar a memória. A redação da Mel pode variar; confira os fatos e as fo
 | Cenário | O que fazer | Resultado esperado |
 | --- | --- | --- |
 | Catálogo e memória | Pergunte “Quanto custa o Takamine GD20?” e depois “E no PIX?” | Tabela **R$ 2.199,00**; PIX com **5%**, total **R$ 2.089,05**. Nova consulta de cotação e aviso de simulação. |
-| Orçamento | “Quais violões disponíveis custam até R$ 1.000?” | Recomendar apenas produtos disponíveis dentro do orçamento; fontes do catálogo. |
+| Orçamento | “Quais violões disponíveis custam até R$ 1.000?” | Listar vários modelos com nomes e preços dentro do orçamento; fontes do catálogo. Uma seleção limitada deve ser apresentada como seleção, sem afirmar o total de opções. Não substituir por cotação PIX nem mencionar uma “lista anterior” inexistente. |
 | Promoção | “Quanto fica o Kalani KAL-700T no PIX?” | Tabela **R$ 359,00**, promoção **10%**, total **R$ 323,10**; não somar os 5% do PIX. |
 | Parcelamento | “Simule uma unidade do Takamine GD20 no cartão em 12 vezes.” | Total **R$ 2.199,00**, **12 × R$ 183,25**, como simulação. |
 | Estoque com restrição | “Posso comprar agora o Kala KA-ABP-CTG?” | `coming_soon`: indisponível para compra, mesmo com duas unidades no cadastro; sem data de lançamento inventada. |

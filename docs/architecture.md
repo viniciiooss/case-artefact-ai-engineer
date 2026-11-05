@@ -41,6 +41,9 @@ flowchart TD
    Se a resposta final não tiver evidência suficiente, uma única tentativa de correção
    solicita nova consulta e preserva o orçamento total de rodadas. Valores de economia
    são calculados no backend e só sustentam menções a desconto, não o preço do produto.
+   A correção descarta o rascunho rejeitado, que não foi exibido ao cliente, mantendo
+   as chamadas de ferramentas e o histórico público anterior. A nova resposta preserva
+   a intenção da pergunta; uma listagem não é convertida em cotação de um único item.
 4. Fontes vêm dos resultados das ferramentas, com IDs, referências e páginas reais.
    O modelo recebe os fatos e os trechos integrais em `policy_context`, sem o envelope
    de metadados `sources`. O backend mantém os resultados completos para a verificação
@@ -104,6 +107,14 @@ backend independentemente da obediência da LLM ao prompt. Isso reduz riscos, se
 demonstrar imunidade a toda prompt injection ou a toda afirmação sem suporte textual.
 Uma verificação heurística adicional confronta valores monetários e domínios comerciais
 com as fontes do turno; não é uma garantia semântica nem comprova qualidade de LLM real.
+Rótulos conservadores de orçamento podem repetir o teto realmente executado em
+`search_products`. Isso não libera esse valor como preço, frete ou desconto. Contadores
+nesses rótulos precisam corresponder ao tamanho do resultado e aparecer antes da
+categoria/seleção, distinguindo “6 opções” de um identificador como “produto 95”.
+
+Quando a busca textual cita uma única família cadastrada, o catálogo infere essa
+categoria se ela foi omitida, preservando os filtros de marca e a categoria explícita.
+Assim, um ukulele que menciona “violão” na descrição não entra na busca por violões.
 
 ## Verificação e evolução
 

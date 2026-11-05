@@ -89,3 +89,18 @@ localmente em `var/`, ignorados pelo Git.
 Este banco ampliado foi validado offline. As execuções pagas anteriores cobriram quatro
 cenários e estão descritas em [validation.md](../docs/validation.md); suas notas não devem
 ser atribuídas aos outros casos ou a alterações posteriores nos critérios do juiz.
+
+## Regressões de respostas observadas
+
+[regressions.jsonl](regressions.jsonl) mantém casos reportados no uso manual, separados
+dos 60 casos originais. O primeiro cobre a listagem de violões até R$ 1.000: exige nomes,
+preços e fontes de vários produtos, sem uma cotação PIX não pedida, ukuleles ou referência
+a uma lista anterior inexistente. Para repetir somente esse caso com os modelos reais:
+
+```bash
+uv run --no-sync python scripts/evaluate_llm.py --cases evals/regressions.jsonl --limit 1 --report var/deepeval-catalog-budget-fix.json
+```
+
+Esse comando também consome créditos. Para conferir só o contrato, acrescente
+`--validate-only`. O resultado real observado foi 0,8 em correção comercial e 1,0 em
+privacidade/escopo; é uma amostra, não uma estimativa de qualidade geral.

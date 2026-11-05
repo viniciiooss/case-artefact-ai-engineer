@@ -18,6 +18,18 @@ ORDER_STATUS = {
     "delivered": "entregue",
     "cancelled": "cancelado",
 }
+BUDGET_LABEL_WORDS = frozenset(
+    "a as o os algumas alguns estes estas esses essas aqui ha tem temos encontrei encontramos "
+    "selecionei selecionamos sao seguem opcao opcoes selecao lista catalogo instrumento "
+    "instrumentos produto produtos modelo modelos violao guitarra baixo bateria teclado piano "
+    "ukulele disponivel disponiveis em estoque com para de do da dos das por seu sua meu minha "
+    "um uma ate no maximo limite orcamento e dentro desse nesta nessa nylon aco classico "
+    "classicos folk".split()
+)
+BUDGET_COUNT_SUBJECTS = frozenset(
+    "opcao opcoes instrumento instrumentos produto produtos modelo modelos "
+    "violao guitarra baixo bateria teclado piano ukulele".split()
+)
 
 
 def money_mentions(text: str) -> set[int]:
@@ -41,14 +53,70 @@ def _cents_fields(value) -> set[int]:
     return result
 
 
+def _without_search_budget_limits(answer: str, outputs: list[dict]) -> str:
+    """Um teto executado na busca não é uma afirmação de preço do instrumento."""
+    budgets: dict[int, set[int]] = {}
+    for output in outputs:
+        if (
+            output.get("name") == "search_products"
+            and "error" not in output["result"]
+            and output.get("args", {}).get("max_price_brl") is not None
+        ):
+            budget = cents(output["args"]["max_price_brl"])
+            budgets.setdefault(budget, set()).add(len(output["result"].get("products", [])))
+
+    def check(match: re.Match) -> str:
+        value = cents(match[1].replace(".", "").replace(",", "."))
+        if value not in budgets:
+            return match[0]
+        clause = re.split(r"\n|(?<=[.!?])\s+", answer[: match.start()])[-1]
+        before = normalize(clause)
+        after = normalize(answer[match.end() :])
+        limit = re.search(
+            r"\b(?:ate|no maximo|orcamento(?: de| e| ate)?|limite(?: de preco)? de)$", before
+        )
+        catalogue_scope = re.search(
+            r"\b(?:opcao|opcoes|selecao|catalogo|instrumentos?|produtos?|modelos?|orcamento|"
+            r"violao|guitarra|baixo|bateria|teclado|piano|ukulele)\b",
+            before,
+        )
+        # Só rótulos de filtro com vocabulário restrito; não ampliar a exceção a
+        # afirmações comerciais sobre preços, frete, descontos ou reembolso.
+        words = before.split()
+        plain_label = all(
+            word in BUDGET_LABEL_WORDS
+            or (
+                word.isdigit()
+                and int(word) in budgets[value]
+                and i + 1 < len(words)
+                and words[i + 1] in BUDGET_COUNT_SUBJECTS
+                and (i == 0 or words[i - 1] not in BUDGET_COUNT_SUBJECTS)
+            )
+            for i, word in enumerate(words)
+        )
+        other_subject_after = re.match(
+            r"^(?:(?:de|em|para|no)\s+)?"
+            r"(?:fretes?|taxas?|descontos?|reembols\w*|pix|parcelas?|pagamento)\b",
+            after,
+        )
+        return (
+            ""
+            if limit and catalogue_scope and plain_label and not other_subject_after
+            else match[0]
+        )
+
+    return MONEY.sub(check, answer)
+
+
 def supported_answer(answer: str, outputs: list[dict]) -> bool:
+    checked_answer = _without_search_budget_limits(answer, outputs)
     payloads = [o["result"] for o in outputs if "error" not in o["result"]]
     known_money = _cents_fields(payloads)
     for payload in payloads:
         for source in payload.get("sources", []):
             if source["kind"] == "policy":
                 known_money.update(money_mentions(source.get("excerpt", "")))
-    if not money_mentions(answer).issubset(known_money):
+    if not money_mentions(checked_answer).issubset(known_money):
         return False
     commercial_money, discount_money = set(), set()
     for payload in payloads:
@@ -62,7 +130,7 @@ def supported_answer(answer: str, outputs: list[dict]) -> bool:
                 data = {k: v for k, v in data.items() if not k.endswith("discount_cents")}
             commercial_money.update(_cents_fields(data))
     # R$ 35 de frete não sustenta a afirmação de que um instrumento custa R$ 35.
-    for sentence in re.split(r"(?<=[.!?])\s+|\n+", answer):
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", checked_answer):
         amounts = set()
         for match in MONEY.finditer(sentence):
             value = cents(match.group(1).replace(".", "").replace(",", "."))

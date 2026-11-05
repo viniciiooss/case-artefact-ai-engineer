@@ -101,3 +101,16 @@
 - Revisão independente aprovada, wheel reinstalado e servidor principal reiniciado.
   Health confirmou Haiku 5.5; Luna e endpoint Anthropic conferidos na configuração instalada.
   Quatro conversas e 16 mensagens existentes preservadas por verificação de digest.
+- Usuário reportou uma cotação isolada no lugar da lista de violões até R$ 1.000.
+  Diagnóstico com Haiku reproduziu falso positivo do orçamento no guard e reparo que
+  tratava rascunho não publicado como resposta anterior. Ambos corrigidos com regressões.
+- Guard de orçamento restrito ao filtro executado e à contagem real, sem liberar preços,
+  frete, desconto, reembolso ou IDs. Reparo preserva pergunta, fontes e protocolo; prompt
+  diferencia listagem de catálogo de cálculo. Categoria omitida pode ser inferida de uma
+  única família explícita na query, excluindo ukulele que menciona violão na descrição.
+- Validação: 226 testes, Ruff e 12/12 cenários HTTP aprovados; revisão final sem bloqueadores.
+  Haiku retornou lista em duas gerações, com observação de 4.539 ms. Caso de regressão
+  separado do golden aprovado pelo Luna: 0,8 comercial e 1,0 privacidade/escopo.
+- Wheel final reinstalado e servidor atualizado. Chrome/API real listaram dez violões
+  com nomes/preços/fontes em 5,2 s e duas gerações, sem cotação indevida ou referência
+  a lista anterior. Reload/mobile aprovados; quatro conversas e 16 mensagens preservadas.

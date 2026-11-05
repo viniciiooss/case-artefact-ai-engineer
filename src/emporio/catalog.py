@@ -143,9 +143,15 @@ class Catalog:
         conditions, params = ["1=1"], []
         if available_only:
             conditions += ["p.status='active'", "p.stock_quantity > 0"]
-        if category:
+        if category or query:
             with connection(self.db_path) as conn:
                 categories = conn.execute("SELECT category_id, name FROM categories").fetchall()
+            if not category:
+                words = set(normalize(query).split())
+                families = [r["name"] for r in categories if normalize(r["name"]) in words]
+                if len(families) == 1:
+                    category = families[0]
+        if category:
             ids = [
                 r["category_id"] for r in categories if normalize(category) in normalize(r["name"])
             ]

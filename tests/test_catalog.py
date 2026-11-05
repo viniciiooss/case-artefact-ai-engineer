@@ -28,6 +28,21 @@ def test_catalog_budget_and_availability(tmp_path):
     assert 96 not in {p["product_id"] for p in results}
 
 
+@pytest.mark.parametrize("query", ["violão", "violões"])
+def test_family_query_does_not_include_another_category_mentioned_in_a_description(tmp_path, query):
+    results = catalog(tmp_path).search_products(query=query, max_price_brl=1000, limit=30)
+    assert {p["product_id"] for p in results} == {81, 82, 83, 84, 85, 86, 87, 88, 89, 91, 107, 112}
+    assert all(p["category"] == "Violões" for p in results)
+
+
+def test_family_inference_preserves_brand_filter_and_explicit_category(tmp_path):
+    repo = catalog(tmp_path)
+    yamaha = repo.search_products(query="violão Yamaha", max_price_brl=1000, limit=30)
+    assert {p["product_id"] for p in yamaha} == {81, 82, 87}
+    explicit = repo.search_products(query="violão", category="Ukuleles", max_price_brl=1000)
+    assert {p["product_id"] for p in explicit} == {128}
+
+
 def test_model_search_and_inactive_promotion(tmp_path):
     result = catalog(tmp_path).search_products(query="Takamine GD20", available_only=False)
     assert len(result) == 1
