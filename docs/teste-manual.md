@@ -1,7 +1,8 @@
 # Testar a aplicação manualmente
 
 Abra **http://127.0.0.1:8000** e recarregue a página. O ambiente local está configurado
-para atendimento com **MiMo-V2.6-Pro**, pelo OpenRouter. O juiz **GLM-5.3 Max** participa
+para atendimento com **Claude Haiku 5.5**, pelo OpenRouter. O juiz **GPT-6 Luna**, com
+esforço de raciocínio `max`, participa
 apenas das avaliações automáticas. As mensagens que precisam do modelo usam créditos
 do OpenRouter; perguntas simples de contato, horário e endereço consultam os dados
 locais sem gerar tokens.
@@ -15,7 +16,7 @@ uv run --no-sync emporio serve --host 127.0.0.1 --port 8000
 
 O indicador do chat deve ficar disponível. Para conferir a configuração, abra
 http://127.0.0.1:8000/api/health: deve aparecer `provider=openrouter` e
-`model=xiaomi/mimo-v2.6-pro`. O healthcheck verifica serviço/dados. Uma pergunta de
+`model=anthropic/claude-haiku-5.5`. O healthcheck verifica serviço/dados. Uma pergunta de
 produto, como “Quanto custa o Takamine GD20?”, confere também a conexão com o modelo;
 uma pergunta da rota pública não testa essa conexão.
 

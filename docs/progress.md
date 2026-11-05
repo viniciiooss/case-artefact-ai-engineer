@@ -91,3 +91,13 @@
   Reload/mobile aprovados; sessão de teste excluída e quatro conversas/14 mensagens preservadas.
 - Ambiente macOS: uv exigiu acesso à configuração de rede fora do sandbox; instalação autorizada.
   Um atributo UF_HIDDEN no .pth da instalação editável bloqueou imports e foi removido localmente.
+- Usuário pediu troca para Claude Haiku 5.5 no atendimento e GPT-6 Luna no juiz.
+  Slugs confirmados no catálogo público e documentação oficial. Configuração padrão e local
+  atualizadas, endpoint priorizado Anthropic; temperatura omitida somente nos modelos novos.
+  Chaves, fontes, FAQ direta e limites preservados, incluindo esforço max separado do juiz.
+- Validação: 205 testes e 12/12 cenários aprovados. Um caso real de promoção executado
+  com Haiku/Luna: 1/1, notas 1,0 comercial e 1,0 privacidade/escopo. Relatório local
+  var/deepeval-haiku55-luna6.json; o banco de 60 casos não foi executado.
+- Revisão independente aprovada, wheel reinstalado e servidor principal reiniciado.
+  Health confirmou Haiku 5.5; Luna e endpoint Anthropic conferidos na configuração instalada.
+  Quatro conversas e 16 mensagens existentes preservadas por verificação de digest.

@@ -91,7 +91,8 @@ class ChatService:
                 base_url=settings.openrouter_base_url,
                 app_url=settings.openrouter_site_url,
                 app_title="Emporio da Musica - Artefact",
-                temperature=0.2,
+                # Haiku 5.5 não aceita controles de amostragem.
+                temperature=None if settings.model == "anthropic/claude-haiku-5.5" else 0.2,
                 max_tokens=1600,
                 # O SDK nativo usa milissegundos, diferente do ChatOpenAI.
                 reasoning=(

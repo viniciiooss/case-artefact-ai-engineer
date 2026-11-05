@@ -80,13 +80,13 @@ def test_openai_configuration_rejects_missing_key_instead_of_switching_to_demo(m
         Settings(provider="openai", _env_file=None)
 
 
-def test_openrouter_uses_a_separate_secret_and_the_requested_mimo_model():
+def test_openrouter_uses_a_separate_secret_and_the_requested_haiku_model():
     from emporio.config import Settings
 
     settings = Settings(
         provider="openrouter", OPENROUTER_API_KEY="test-openrouter-key", _env_file=None
     )
-    assert settings.model == "xiaomi/mimo-v2.6-pro"
+    assert settings.model == "anthropic/claude-haiku-5.5"
     assert settings.openrouter_api_key.get_secret_value() == "test-openrouter-key"
     assert "test-openrouter-key" not in repr(settings)
 
@@ -162,10 +162,18 @@ def _intercept_httpx(monkeypatch, handler):
     monkeypatch.setattr(httpx.Client, "__init__", configure_transport)
 
 
-@pytest.mark.parametrize("provider_order", [[], ["Xiaomi"]])
+@pytest.mark.parametrize(
+    "model_id,provider_order",
+    [
+        ("xiaomi/mimo-v2.6-pro", []),
+        ("xiaomi/mimo-v2.6-pro", ["Xiaomi"]),
+        ("anthropic/claude-haiku-5.5", []),
+        ("anthropic/claude-haiku-5.5", ["Anthropic"]),
+    ],
+)
 @pytest.mark.parametrize("reasoning_effort", ["none", "default"])
 def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_timeout(
-    tmp_path, monkeypatch, provider_order, reasoning_effort
+    tmp_path, monkeypatch, model_id, provider_order, reasoning_effort
 ):
     from langchain_openrouter import ChatOpenRouter
 
@@ -196,7 +204,7 @@ def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_t
                 "object": "chat.completion",
                 "system_fingerprint": None,
                 "created": 0,
-                "model": "xiaomi/mimo-v2.6-pro",
+                "model": model_id,
                 "choices": [
                     {
                         "index": 0,
@@ -211,6 +219,7 @@ def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_t
     _intercept_httpx(monkeypatch, respond)
     settings = Settings(
         provider="openrouter",
+        model=model_id,
         OPENROUTER_API_KEY="test-router-key",
         openrouter_provider_order=provider_order,
         attendant_reasoning_effort=reasoning_effort,
@@ -240,7 +249,11 @@ def test_openrouter_sdk_executes_the_same_tools_with_attribution_and_a_bounded_t
         assert first.get("reasoning") == {"effort": "none"}
     else:
         assert "reasoning" not in first
-    assert first["model"] == "xiaomi/mimo-v2.6-pro"
+    assert first["model"] == model_id
+    if model_id == "anthropic/claude-haiku-5.5":
+        assert "temperature" not in first
+    else:
+        assert first["temperature"] == 0.2
     assert "response_format" not in first
     assert any(t["function"]["name"] == "get_order" for t in first["tools"])
     tool_message = next(m for m in second["messages"] if m["role"] == "tool")

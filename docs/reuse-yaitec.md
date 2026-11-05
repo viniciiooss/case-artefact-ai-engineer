@@ -32,7 +32,11 @@ Isso orientou a configuração padrão; não comprova a qualidade do modelo para
 Após o pedido de atualização, o atendimento passou para
 [`xiaomi/mimo-v2.6-pro`](https://openrouter.ai/xiaomi/mimo-v2.6-pro) e o juiz para
 [`z-ai/glm-5.3`](https://openrouter.ai/z-ai/glm-5.3) com `reasoning.effort=max`.
-O GLM tem orçamento e timeout próprios da avaliação; o juiz não participa do atendimento.
+O juiz tem orçamento e timeout próprios da avaliação e não participa do atendimento.
+Em uma atualização posterior solicitada pelo usuário, os padrões passaram para
+Claude Haiku 5.5 no atendimento e GPT-6 Luna no juiz, ainda pelo OpenRouter. Os parâmetros
+de temperatura são omitidos nesses dois modelos, conforme seu suporte; a preferência
+local de endpoint do atendimento passou de Xiaomi para Anthropic.
 `require_parameters=true` exige suporte aos parâmetros enviados; veja
 [roteamento de provedores](https://openrouter.ai/docs/guides/routing/provider-selection).
 
@@ -47,8 +51,10 @@ No `.env` deste projeto:
 
 ```dotenv
 EMPORIO_PROVIDER=openrouter
-EMPORIO_MODEL=xiaomi/mimo-v2.6-pro
-EMPORIO_EVAL_MODEL=z-ai/glm-5.3
+EMPORIO_MODEL=anthropic/claude-haiku-5.5
+EMPORIO_OPENROUTER_PROVIDER_ORDER=["Anthropic"]
+EMPORIO_ATTENDANT_REASONING_EFFORT=none
+EMPORIO_EVAL_MODEL=openai/gpt-6-luna
 EMPORIO_EVAL_REASONING_EFFORT=max
 OPENROUTER_API_KEY=sua-chave
 ```

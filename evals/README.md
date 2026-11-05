@@ -60,9 +60,10 @@ Os testes locais também conferem se IDs/páginas de fontes e identificações d
 existem no snapshot. Casos com JSON inválido, ID repetido, tipo desconhecido ou entrada
 vazia são recusados antes das chamadas pagas.
 
-## Executar com MiMo-V2.6-Pro e GLM-5.3 Max
+## Executar com Claude Haiku 5.5 e GPT-6 Luna
 
-Instale os extras e mantenha as chaves no `.env`:
+O agente usa `anthropic/claude-haiku-5.5`; o juiz usa `openai/gpt-6-luna` com raciocínio
+`max`. Instale os extras e mantenha as chaves no `.env`:
 
 ```bash
 uv sync --locked --no-editable --extra observability --extra eval

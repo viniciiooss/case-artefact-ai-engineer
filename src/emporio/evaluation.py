@@ -38,7 +38,8 @@ class OpenRouterJudge(DeepEvalBaseLLM):
             base_url=self.settings.openrouter_base_url,
             app_url=self.settings.openrouter_site_url,
             app_title="Emporio da Musica - Artefact Evaluation",
-            temperature=0,
+            # GPT-6 Luna não aceita temperatura; o restante do contrato é preservado.
+            temperature=None if self.settings.eval_model == "openai/gpt-6-luna" else 0,
             max_tokens=self.settings.eval_max_tokens,
             reasoning={"effort": self.settings.eval_reasoning_effort},
             timeout=max(1, int(self.settings.eval_timeout * 1000)),

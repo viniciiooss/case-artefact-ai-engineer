@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **200 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden e rota de FAQ |
+| Suíte pytest completa | **205 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden e rota de FAQ |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -325,6 +325,40 @@ de teste foi criada explicitamente e excluída ao final; um digest das mensagens
 a preservação das **quatro conversas e 14 mensagens** existentes. Evidências locais:
 `var/chat-speed-live.json`, `var/chat-speed-live-desktop.png`,
 `var/chat-speed-live-mobile.png` e `var/latency-session-preservation.json`.
+
+## Atualização: Claude Haiku 5.5 e GPT-6 Luna
+
+A pedido do usuário, o atendimento passou para `anthropic/claude-haiku-5.5` e o juiz
+para `openai/gpt-6-luna`, pelo OpenRouter. Defaults, `.env.example` e `.env` local foram
+alinhados; chaves e demais variáveis foram preservadas, com permissão 0600. O endpoint
+priorizado no atendimento passou de Xiaomi para Anthropic. Fallback e retries continuam
+desativados, atendimento com esforço `none` e juiz com `max`, 8.192 tokens e 120 segundos.
+
+O [catálogo público do OpenRouter](https://openrouter.ai/api/v1/models) e os endpoints
+dos dois modelos confirmaram suporte a ferramentas/JSON, sem `temperature`.
+A [documentação do Haiku 5.5](https://platform.claude.com/docs/en/models/haiku-5-5/overview)
+orienta omitir temperatura; a [documentação do GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna)
+confirma raciocínio `max`. O juiz não usa function calling. A omissão de temperatura
+foi limitada a esses slugs, preservando o comportamento das configurações MiMo/GLM.
+
+Validação: **205 testes**, Ruff e **12/12 cenários HTTP** passaram. Os testes exercitam
+o SDK real com transporte controlado, chamadas de ferramentas do Haiku, JSON síncrono
+e assíncrono do Luna e compatibilidade com os modelos anteriores.
+
+Um único caso real já autorizado, `promocao-sem-acumulo`, foi executado com os modelos
+novos: **1/1 aprovado**, **1,0 em correção comercial** e **1,0 em privacidade/escopo**.
+O agente e o juiz usaram os limites configurados; bancos temporários e sessões da
+avaliação foram removidos. Relatório local: `var/deepeval-haiku55-luna6.json`.
+Essa amostra confirma o funcionamento do par, sem atribuir as notas aos outros casos
+ou substituir a avaliação completa do golden. As medições anteriores de MiMo foram
+preservadas como históricas em [latency.md](latency.md).
+
+Wheel reinstalado e servidor principal reiniciado em `http://127.0.0.1:8000`.
+O healthcheck confirmou `model=anthropic/claude-haiku-5.5`; a configuração instalada
+confirmou o juiz Luna e endpoint Anthropic. O digest das mensagens confirmou a
+preservação das quatro conversas e 16 mensagens existentes no momento da troca.
+A revisão independente não encontrou problemas concretos. Evidências locais:
+`var/haiku-luna-runtime.json` e `var/model-switch-preservation.json`.
 
 ## Ambiente desta sessão
 

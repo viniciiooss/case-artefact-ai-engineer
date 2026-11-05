@@ -31,7 +31,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("LANGFUSE_BASE_URL", "LANGFUSE_HOST"),
     )
     langfuse_environment: str = "artefact-local"
-    eval_model: str = "z-ai/glm-5.3"
+    eval_model: str = "openai/gpt-6-luna"
     eval_reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] = (
         "max"
     )
@@ -63,7 +63,7 @@ class Settings(BaseSettings):
             self.model = {
                 "demo": "deterministic-v1",
                 "openai": "gpt-4.1-mini",
-                "openrouter": "xiaomi/mimo-v2.6-pro",
+                "openrouter": "anthropic/claude-haiku-5.5",
                 "ollama": "qwen3:8b",
             }[self.provider]
         if self.provider == "openrouter" and "/" not in self.model:

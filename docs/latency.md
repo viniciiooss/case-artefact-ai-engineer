@@ -1,5 +1,10 @@
 # Latência e referências na resposta
 
+As medições abaixo registram a configuração anterior, com MiMo-V2.6-Pro e juiz GLM-5.3.
+A configuração atual usa Claude Haiku 5.5 no atendimento e GPT-6 Luna no juiz; veja
+[README](../README.md). A troca de modelos não transforma esta amostra em um benchmark
+do Haiku. A rota pública sem geração continua ativa.
+
 O caso observado foi “qual o canal de atendimento”: **12.669 ms**, com duas gerações
 de aproximadamente **7.030 ms** e **5.604 ms** nos metadados dos traces. O texto voltou
 a citar o manual apesar da instrução no prompt. A busca local não era o principal custo;

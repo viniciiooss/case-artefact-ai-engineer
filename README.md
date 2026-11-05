@@ -61,7 +61,7 @@ OPENAI_API_KEY=sua-chave
 ```dotenv
 # OpenRouter: integração adaptada do case anterior da Yaitec
 EMPORIO_PROVIDER=openrouter
-EMPORIO_MODEL=xiaomi/mimo-v2.6-pro
+EMPORIO_MODEL=anthropic/claude-haiku-5.5
 OPENROUTER_API_KEY=sua-chave
 ```
 
@@ -86,11 +86,14 @@ function calling e a execução real das ferramentas; eles não fazem chamadas a
 
 OpenRouter usa a integração nativa `langchain-openrouter`, com modelo no formato
 `provedor/modelo`. O atendimento usa por padrão
-[`xiaomi/mimo-v2.6-pro`](https://openrouter.ai/xiaomi/mimo-v2.6-pro), atualizado a pedido
+[`anthropic/claude-haiku-5.5`](https://platform.claude.com/docs/en/models/haiku-5-5/overview), atualizado a pedido
 do usuário. A disponibilidade e o suporte a ferramentas dependem do catálogo do provedor.
 São exigidos parâmetros compatíveis com as ferramentas, sem fallback automático para
 outro endpoint ou provedor da aplicação. O backend identifica autenticação, créditos,
 requisição inválida, limite de uso e timeout sem propagar mensagens brutas de erro.
+Na configuração local, o atendimento prioriza o endpoint Anthropic. Haiku 5.5 e o juiz
+GPT-6 Luna recebem requisições sem `temperature`, conforme seus parâmetros suportados;
+o contrato de ferramentas e os limites de execução continuam os mesmos.
 Veja a [análise do reaproveitamento](docs/reuse-yaitec.md) e a
 [integração oficial](https://openrouter.ai/blog/tutorials/langchain-chatopenrouter-setup/).
 
@@ -103,7 +106,7 @@ atendimento usa `reasoning.effort=none` por padrão; o juiz mantém `max`. A
 | Variável | Padrão | Finalidade |
 | --- | --- | --- |
 | `EMPORIO_PROVIDER` | `demo` | `demo`, `openai`, `openrouter` ou `ollama` |
-| `EMPORIO_MODEL` | por provedor | `deterministic-v1`, `gpt-4.1-mini`, `xiaomi/mimo-v2.6-pro` ou `qwen3:8b` |
+| `EMPORIO_MODEL` | por provedor | `deterministic-v1`, `gpt-4.1-mini`, `anthropic/claude-haiku-5.5` ou `qwen3:8b` |
 | `EMPORIO_DATA_DIR` | `data` | Seis CSVs e PDF de políticas |
 | `EMPORIO_STATE_DIR` | `var` | Catálogo, sessões e protocolos locais |
 | `EMPORIO_MAX_TOOL_ROUNDS` | `4` | Limite de rodadas de ferramentas; de 1 a 8 |
@@ -113,12 +116,12 @@ atendimento usa `reasoning.effort=none` por padrão; o juiz mantém `max`. A
 | `EMPORIO_OLLAMA_URL` | `http://localhost:11434` | Endereço do servidor Ollama |
 | `EMPORIO_OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | Endpoint do OpenRouter |
 | `EMPORIO_OPENROUTER_SITE_URL` | `http://127.0.0.1:8000` | Identificação da aplicação no OpenRouter |
-| `EMPORIO_OPENROUTER_PROVIDER_ORDER` | `[]` | Endpoints priorizados só no atendimento, por exemplo `["Xiaomi"]`; fallback desativado |
+| `EMPORIO_OPENROUTER_PROVIDER_ORDER` | `[]` | Endpoints priorizados só no atendimento, por exemplo `["Anthropic"]`; fallback desativado |
 | `EMPORIO_ATTENDANT_REASONING_EFFORT` | `none` | Raciocínio do atendimento OpenRouter; `default` omite o parâmetro e mantém o padrão do provedor |
 | `EMPORIO_LANGFUSE_ENABLED` | `false` | Ativa tracing com as chaves Langfuse configuradas |
 | `LANGFUSE_BASE_URL` | `https://cloud.langfuse.com` | Região/servidor do projeto; aceita o alias `LANGFUSE_HOST` |
 | `EMPORIO_LANGFUSE_ENVIRONMENT` | `artefact-local` | Ambiente das observações da Empório |
-| `EMPORIO_EVAL_MODEL` | `z-ai/glm-5.3` | Modelo do juiz DeepEval, chamado pelo OpenRouter |
+| `EMPORIO_EVAL_MODEL` | `openai/gpt-6-luna` | Modelo do juiz DeepEval, chamado pelo OpenRouter |
 | `EMPORIO_EVAL_REASONING_EFFORT` | `max` | Esforço de raciocínio do juiz; requer suporte do modelo escolhido |
 | `EMPORIO_EVAL_MAX_TOKENS` | `8192` | Limite por chamada do juiz, incluindo raciocínio e resposta |
 | `EMPORIO_EVAL_TIMEOUT` | `120` | Tempo limite de uma chamada ao juiz, em segundos |
@@ -161,8 +164,8 @@ uv run --no-sync python scripts/evaluate_llm.py --limit 4 --report var/deepeval.
 Esse comando **envia perguntas, respostas e referências ao OpenRouter e consome créditos**
 da chave configurada. O agente usa `EMPORIO_MODEL`; o juiz usa `EMPORIO_EVAL_MODEL`, uma
 chamada por métrica e caso, sem gerar etapas extras da rubrica nem retries automáticos.
-O padrão do juiz é [`z-ai/glm-5.3`](https://openrouter.ai/z-ai/glm-5.3) com
-`reasoning.effort=max`: “Max” é um nível de raciocínio, não outro slug. O juiz tem orçamento
+O padrão do juiz é [`openai/gpt-6-luna`](https://developers.openai.com/api/docs/models/gpt-6-luna) com
+`reasoning.effort=max`. O juiz tem orçamento
 de tokens e timeout próprios para reservar espaço para o raciocínio e o JSON final.
 São quatro casos: catálogo/PIX em dois turnos, promoção sem acumular desconto, devolução
 condicionada e tentativa de listar dados de clientes. Os bancos da avaliação são temporários.

@@ -35,7 +35,7 @@ def judge_transport(monkeypatch):
                 "object": "chat.completion",
                 "system_fingerprint": None,
                 "created": 0,
-                "model": "z-ai/glm-5.3",
+                "model": json.loads(request.content)["model"],
                 "choices": [
                     {
                         "index": 0,
@@ -71,9 +71,11 @@ def configured(tmp_path):
     )
 
 
+@pytest.mark.parametrize("judge_model", ["openai/gpt-6-luna", "z-ai/glm-5.3"])
 def test_judge_uses_openrouter_and_returns_validated_schemas_sync_and_async(
     tmp_path,
     judge_transport,
+    judge_model,
 ):
     from emporio.evaluation import OpenRouterJudge
 
@@ -83,7 +85,8 @@ def test_judge_uses_openrouter_and_returns_validated_schemas_sync_and_async(
 
     requests, replies = judge_transport
     replies.extend(['{"score":9,"reason":"Correto"}'] * 2)
-    judge = OpenRouterJudge(configured(tmp_path))
+    settings = configured(tmp_path).model_copy(update={"eval_model": judge_model})
+    judge = OpenRouterJudge(settings)
     assert judge.generate("Avalie a resposta", schema=Verdict).score == 9
     assert asyncio.run(judge.a_generate("Avalie a resposta", schema=Verdict)).reason == "Correto"
     assert len(requests) == 2
@@ -91,11 +94,14 @@ def test_judge_uses_openrouter_and_returns_validated_schemas_sync_and_async(
         body = json.loads(request.content)
         assert str(request.url) == "https://openrouter.ai/api/v1/chat/completions"
         assert request.headers["authorization"] == "Bearer test-judge-key"
-        assert body["model"] == "z-ai/glm-5.3"
+        assert body["model"] == judge_model
         assert body["response_format"]["type"] == "json_object"
         assert body["max_tokens"] == 8192
         assert body["reasoning"]["effort"] == "max"
-        assert body["temperature"] == 0
+        if judge_model == "openai/gpt-6-luna":
+            assert "temperature" not in body
+        else:
+            assert body["temperature"] == 0
         assert request.extensions["timeout"]["read"] == 120
 
 
@@ -181,7 +187,7 @@ def test_evaluation_report_keeps_failed_metric_and_removes_sessions(tmp_path, ju
     assert report["total"] == 1 and report["passed"] == 0
     assert report["cases"][0]["metrics"][0]["score"] == 0.2
     assert report["metadata"]["provider"] == "demo"
-    assert report["metadata"]["judge_model"] == "z-ai/glm-5.3"
+    assert report["metadata"]["judge_model"] == "openai/gpt-6-luna"
     assert report["metadata"]["judge_reasoning_effort"] == "max"
     assert report["metadata"]["judge_max_tokens"] == 8192
     serialized = json.dumps(report)
