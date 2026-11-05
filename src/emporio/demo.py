@@ -434,7 +434,7 @@ class DemoModel:
                     "Vamos conferir as condições: "
                     + " E ".join(missing)
                     + (
-                        " Para arrependimento online, o manual prevê até 7 dias corridos "
+                        " Para arrependimento online, o prazo é de até 7 dias corridos "
                         "do recebimento; "
                         "a previsão do pedido não comprova essa data."
                     )
@@ -448,22 +448,18 @@ class DemoModel:
                     else "\n\n"
                 )
                 + a.get("conditions", "")
-                + "\n\nPosso orientar pelo manual; a equipe confirma a solicitação e as condições."
+                + "\n\nA equipe confirma a solicitação e as condições."
             )
         if "ticket" in payload:
             ticket = payload["ticket"]
             return f"Seu protocolo é {ticket['ticket_id']}. " + ticket["message"]
         sources = payload.get("sources", [])
         if not sources:
-            return (
-                "Não encontrei essa informação no manual. A equipe pode confirmar pelo atendimento."
-            )
+            return "Não tenho essa informação confirmada. A equipe pode verificar pelo atendimento."
         passages = []
         for source in sources[:2]:
-            excerpt = source["excerpt"]
+            excerpt = re.sub(r"^\d+(?:\.\d+)*\.?\s+", "", source["excerpt"])
             if len(excerpt) > 1100:
                 excerpt = excerpt[:1100].rsplit(" ", 1)[0] + " […]"
-            passages.append(
-                f"{source['title']} (página {source['page']}):\n" + excerpt.replace(" • ", "\n• ")
-            )
-        return "Encontrei estas orientações no manual da loja:\n\n" + "\n\n".join(passages)
+            passages.append(excerpt.replace(" • ", "\n• "))
+        return "Estas são as condições da loja:\n\n" + "\n\n".join(passages)

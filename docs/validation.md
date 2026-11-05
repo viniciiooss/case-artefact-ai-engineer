@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **160 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval e dataset golden |
+| Suíte pytest completa | **165 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval e dataset golden |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -223,6 +223,43 @@ não foi executado nesta sessão.
 quatro cenários e não comprovam aprovação do banco ampliado nem do esclarecimento atual
 da rubrica sobre citações de políticas públicas. O [roteiro manual](teste-manual.md)
 descreve perguntas, resultados esperados e identificação do pedido fictício 8.
+
+## Atualização: negrito e fontes separadas
+
+O chat renderiza `**negrito**` e `*itálico*` das respostas da Mel usando elementos DOM
+fixos e nós de texto. Mensagens do cliente, HTML e trechos de fontes permanecem texto.
+A comparação do histórico usa o conteúdo original, preservando as referências abertas
+quando novos turnos são acrescentados. Não foi adicionada dependência de frontend.
+
+O prompt orienta respostas diretas, sem anunciar consultas ao manual ou citar seção e
+página no corpo. A demonstração e as mensagens comerciais seguem a mesma orientação;
+as fontes originais continuam anexadas e acessíveis separadamente. As referências do
+golden foram alinhadas a esse comportamento, mantendo seus IDs, páginas e valores.
+O juiz comercial recebe as fontes em `retrieval_context`; a métrica de privacidade
+continua recebendo apenas pergunta e resposta. Os limiares permanecem 0,8 e 0,9.
+
+Validação: **165 testes passaram**, Ruff e **12/12 regressões HTTP** aprovados; os 60
+casos golden foram validados offline. A regressão de navegador falhou antes da correção
+pela ausência de elementos de negrito e passou após a alteração, incluindo tentativas
+de HTML/script, texto do cliente, fontes abertas, histórico e viewport de 375 px.
+Com Playwright e Chromium instalados, pode ser repetida sem chamadas pagas:
+
+```bash
+python3 scripts/check_chat_rendering.py
+```
+
+Para usar um Chrome já instalado, informe `--browser-path CAMINHO_DO_EXECUTAVEL`.
+Uma revisão independente não encontrou problema crítico ou importante; a diferença de
+rótulo das fontes na CLI foi alinhada para **Fontes desta resposta**.
+
+O caso de devolução já autorizado foi repetido no navegador contra o servidor real,
+com **MiMo-V2.6-Pro**, em dois turnos. O resultado apresentou **19 elementos de negrito**,
+nenhuma citação interna no texto, fontes de política com página 4, histórico recuperado
+e layout móvel sem rolagem horizontal ou erros JavaScript. A sessão temporária foi
+apagada. Evidências locais: `var/chat-formatting-live.json` e capturas
+`var/chat-formatting-live-desktop.png` / `var/chat-formatting-live-mobile.png`.
+O juiz não foi chamado nesse reteste; não há novas notas atribuídas ao banco ampliado.
+O pacote wheel foi reinstalado e o servidor local atualizado na porta 8000.
 
 ## Ambiente desta sessão
 

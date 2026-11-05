@@ -75,6 +75,25 @@ def test_return_clarifies_then_applies_actual_receipt_date(tmp_path):
     assert "embalagem" in second["message"].lower()
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Qual o horário de funcionamento?",
+        "Quanto custa o Takamine GD20 no boleto?",
+        "Me arrependi da compra, posso devolver?",
+        "Foi online e recebi há 3 dias, quero devolver por arrependimento.",
+    ],
+)
+def test_customer_answer_keeps_internal_references_in_sources(tmp_path, question):
+    svc = service(tmp_path)
+    result = svc.chat(svc.create_session()["session_id"], question)
+    answer = result["message"].lower()
+    assert "manual" not in answer.replace("manuais", "")
+    assert "página" not in answer
+    assert "seção" not in answer
+    assert any(source.get("page") for source in result["sources"])
+
+
 def test_accessories_and_out_of_scope_are_handled_without_fake_stock(tmp_path):
     svc = service(tmp_path)
     session = svc.create_session()["session_id"]

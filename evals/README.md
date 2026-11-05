@@ -28,6 +28,12 @@ não contam como consulta bem-sucedida. Uma nota alta do juiz não encobre uma v
 exata reprovada. Os checks não são um validador semântico universal: por exemplo, citar
 um valor correto também numa frase incorreta ainda exige avaliação do juiz/humana.
 
+Seção, página e trechos pertencem à área **Fontes desta resposta**, separada do texto da
+Mel. O grupo `citacao_fonte` verifica essas referências nos metadados; o texto ao cliente
+deve responder diretamente, sem anunciar consultas ao manual. O juiz comercial recebe
+as fontes em `retrieval_context`, além da resposta e da referência; não exige citações
+no corpo da resposta. A métrica de privacidade continua recebendo só pergunta e resposta.
+
 `order_access` define uma identificação prévia **pelo backend**, equivalente ao formulário
 da interface. O runner usa os dados fictícios do snapshot e apaga a sessão ao final.
 O juiz recebe apenas a informação de que aquele número de pedido foi autorizado;

@@ -56,7 +56,7 @@ def quote(
             if installments <= 3:
                 status = "needs_review"
                 notes.append(
-                    "A exceção para parcelas abaixo de R$ 50,00 é ambígua no manual; "
+                    "A exceção para parcelas abaixo de R$ 50,00 depende de análise; "
                     "a equipe precisa confirmar a condição."
                 )
             else:
@@ -72,19 +72,19 @@ def quote(
                 if status == "ok":
                     status = "needs_review"
                 notes.append(
-                    "O manual não define o frete para exatamente R$ 500,00. Confirme com a equipe."
+                    "O frete para exatamente R$ 500,00 precisa de confirmação com a equipe."
                 )
             else:
                 shipping = 0 if total > 50000 else 3500
         else:
             notes.append(
                 "Para essa cidade, o frete precisa de cotação com CEP, peso e dimensões; "
-                "não há tabela suficiente no material fornecido."
+                "não há tabela suficiente para confirmar o valor."
             )
     if promotion:
         notes.append("Promoção ativa aplicada. O desconto PIX não acumula com a promoção.")
     if payment == "boleto":
-        notes.append("Compensação do boleto em até 3 dias úteis, conforme o manual.")
+        notes.append("Compensação do boleto em até 3 dias úteis.")
     return {
         "status": status,
         "product_id": product["product_id"],
@@ -139,14 +139,14 @@ def assess_return(
         return {
             "status": "needs_review",
             "missing": [],
-            "message": "A seção de arrependimento trata de compras online. "
+            "message": "O prazo de arrependimento se aplica a compras online. "
             "Para compra presencial, consulte a equipe.",
         }
     elapsed = (today - base_date).days
     limit = 30 if reason == "defect" else 7
     conditions = (
-        "Confirmar defeito de fabricação; após 30 dias, o manual orienta acionar a garantia "
-        "do fabricante, com possível intermediação da loja. A seção 8 também prevê garantia "
+        "Confirmar defeito de fabricação; após 30 dias, a orientação é acionar a garantia "
+        "do fabricante, com possível intermediação da loja. Também há garantia "
         "de 90 dias; a equipe deve avaliar a aplicação."
         if reason == "defect"
         else "Confirmar embalagem original, ausência de sinais de uso, acessórios e manuais. "
@@ -159,7 +159,7 @@ def assess_return(
         "policy_limit_days": limit,
         "remaining_days": max(0, limit - elapsed),
         "conditions": conditions,
-        "message": "Está dentro do prazo descrito no manual, sujeito às condições."
+        "message": "Está dentro do prazo, sujeito às condições."
         if elapsed <= limit
-        else "O prazo desta regra do manual foi ultrapassado; a equipe precisa avaliar o caso.",
+        else "O prazo desta regra foi ultrapassado; a equipe precisa avaliar o caso.",
     }

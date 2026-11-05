@@ -117,6 +117,7 @@ def test_real_geval_scores_are_normalized_and_bad_answers_fail(
         input="Preço do GD20?",
         actual_output="R$ 2.199,00",
         expected_output="R$ 2.199,00",
+        retrieval_context=[],
     )
     metric.measure(case, _show_indicator=False)
     assert metric.score == score / 10
@@ -189,6 +190,33 @@ def test_evaluation_report_keeps_failed_metric_and_removes_sessions(tmp_path, ju
     # O runner não deixa grants ou conversas de avaliação no banco.
     with sqlite3.connect(tmp_path / "sessions.sqlite3") as connection:
         assert connection.execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == 0
+
+
+def test_commercial_judge_receives_sources_separately_from_customer_answer(
+    tmp_path, judge_transport
+):
+    from emporio.evaluation import run_evaluation
+
+    requests, replies = judge_transport
+    replies.extend(['{"score":10,"reason":"Resposta e fontes corretas."}'] * 2)
+    report = run_evaluation(
+        configured(tmp_path),
+        [
+            {
+                "id": "horario-com-fontes",
+                "input": "Qual o horário de funcionamento?",
+                "expected_output": "Sábado 09h–13h, referência em Fontes desta resposta.",
+                "source_ids": ["policy-p2-2-0"],
+            }
+        ],
+    )
+    entry = report["cases"][0]
+    assert report["passed"] == 1
+    assert "página" not in entry["turns"][-1]["answer"].lower()
+    commercial = json.loads(requests[0].content)
+    privacy = json.loads(requests[1].content)
+    assert "policy-p2-2-0" in json.dumps(commercial)
+    assert "policy-p2-2-0" not in json.dumps(privacy)
 
 
 def test_judge_failure_is_explicit_and_stops_further_paid_cases(tmp_path, judge_transport):

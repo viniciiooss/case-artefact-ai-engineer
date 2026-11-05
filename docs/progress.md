@@ -57,5 +57,14 @@
   Wheel reinstalado e CLI de validação executada a partir do pacote instalado.
   Nenhum caso novo foi enviado a modelos pagos nesta atualização; o banco de 60 está pronto
   para execução explícita. Página e healthcheck locais continuam respondendo HTTP 200.
+- Chat ajustado para exibir negrito/itálico com DOM seguro, mantendo o texto original para
+  comparação do histórico e preservando fontes abertas entre turnos. Prompt, demo e mensagens
+  comerciais agora respondem diretamente, com referências apenas na área de fontes.
+- Golden e juiz comercial alinhados às fontes separadas; privacidade continua sem receber
+  as referências comerciais. Validação: 165 testes, Ruff, 12/12 cenários e 60 casos válidos
+  offline. Regressão Chrome exercitou formatação, HTML malicioso, fontes, histórico e mobile.
+- Devolução em dois turnos repetida com MiMo real: negrito visível, nenhuma citação interna
+  no texto, fontes preservadas e histórico/mobile aprovados. Sem chamada ao juiz; sessão
+  temporária excluída. Wheel reinstalado e servidor atualizado em http://127.0.0.1:8000.
 - Ambiente macOS: uv exigiu acesso à configuração de rede fora do sandbox; instalação autorizada.
   Um atributo UF_HIDDEN no .pth da instalação editável bloqueou imports e foi removido localmente.

@@ -3,6 +3,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const storageKey = "emporio.mel.session.v1";
+  const messageText = new WeakMap();
   const state = { session: null, messages: [], ready: false, busy: false, verifying: false, resetting: false, verifiedOrders: [], initialization: null };
   const messageInput = $("message");
   const orderDialog = $("order-dialog");
@@ -143,10 +144,30 @@
     }
     const content = document.createElement("p");
     content.className = "message-content";
-    content.textContent = String(message.content || "");
+    const text = String(message.content || "");
+    messageText.set(article, text);
+    if (message.role === "assistant") renderEmphasis(text, content);
+    else content.textContent = text;
     article.append(content);
     if (message.role === "assistant") renderSources(message.sources, article);
     $("messages").append(article);
+  }
+
+  function renderEmphasis(text, parent) {
+    // Só criamos texto e elementos de ênfase; HTML, links e imagens não são executados.
+    const pattern = /\\([\\*])|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*/g;
+    let end = 0;
+    for (const match of text.matchAll(pattern)) {
+      parent.append(document.createTextNode(text.slice(end, match.index)));
+      if (match[1]) parent.append(document.createTextNode(match[1]));
+      else {
+        const emphasis = document.createElement(match[2] ? "strong" : "em");
+        emphasis.textContent = match[2] || match[3];
+        parent.append(emphasis);
+      }
+      end = match.index + match[0].length;
+    }
+    parent.append(document.createTextNode(text.slice(end)));
   }
 
   function renderHistory() {
@@ -155,7 +176,7 @@
     while (common < log.children.length && common < state.messages.length) {
       const node = log.children[common];
       const message = state.messages[common];
-      if (!node.classList.contains(`message-${message.role}`) || node.querySelector(".message-content").textContent !== String(message.content || "")) break;
+      if (!node.classList.contains(`message-${message.role}`) || messageText.get(node) !== String(message.content || "")) break;
       common += 1;
     }
     while (log.children.length > common) log.lastChild.remove();

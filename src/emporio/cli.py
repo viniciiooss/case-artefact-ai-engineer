@@ -43,7 +43,7 @@ def _response(response: dict):
     console.print(f"Mel: {response['message']}")
     sources = response.get("sources", [])
     if sources:
-        console.print("Fontes consultadas:")
+        console.print("Fontes desta resposta:")
         for source in sources:
             page = f" · página {source['page']}" if source.get("page") else ""
             console.print(f"  • {source.get('title', 'Referência')}{page}")
