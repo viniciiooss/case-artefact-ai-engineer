@@ -21,7 +21,16 @@ def product_source(product: dict) -> dict:
     }
 
 
-def make_tools(catalog, policies, sessions, session_id: str, question: str, today: date):
+def make_tools(
+    catalog,
+    policies,
+    sessions,
+    session_id: str,
+    question: str,
+    today: date,
+    *,
+    quote_question: str | None = None,
+):
     """Dependências e identidade capturadas no servidor, fora do schema da LLM."""
 
     @tool
@@ -92,7 +101,7 @@ def make_tools(catalog, policies, sessions, session_id: str, question: str, toda
         Sem quantidade de parcelas definida, use installments=None: mostra 3x como exemplo.
         Não escolhe um subconjunto nem tenta números de parcelas não solicitados.
         """
-        requested = installment_counts(question)
+        requested = installment_counts(quote_question or question)
         if not requested:
             installments = None  # O exemplo padrão é decisão do backend, não do modelo.
         elif installments is None and len(requested) == 1:

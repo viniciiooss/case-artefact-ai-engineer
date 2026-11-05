@@ -10,7 +10,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from pydantic import ValidationError
 
-from emporio.comparisons import comparison_reply, comparison_request
+from emporio.comparisons import comparison_question, comparison_reply, comparison_request
 from emporio.grounding import supported_answer
 from emporio.presentation import customer_answer
 from emporio.prompts import SYSTEM_PROMPT
@@ -40,6 +40,7 @@ class AgentState(TypedDict):
     model_calls: int
     public_source_ids: list[str]
     comparison_args: dict | None
+    quote_question: str
     execution_path: str
 
 
@@ -68,7 +69,9 @@ class AgentRunner:
         )
         graph.add_edge("quote_request", "tools")
         graph.add_conditional_edges(
-            "tools", self._after_tools, {"model": "model", "format_quotes": "format_quotes"}
+            "tools",
+            self._after_tools,
+            {"model": "model", "format_quotes": "format_quotes", "quote_request": "quote_request"},
         )
         graph.add_edge("format_quotes", END)
         graph.add_edge("limit", END)
@@ -123,6 +126,13 @@ class AgentRunner:
             and "quotes" in last["result"]
         ):
             return "format_quotes"
+        if (
+            state.get("comparison_args")
+            and "quote_products" in self.tools
+            and last["name"] == "search_products"
+            and state["rounds"] < self.max_rounds
+        ):
+            return "quote_request"
         return "model"
 
     def _format_quotes(self, state: AgentState) -> dict:
@@ -219,11 +229,18 @@ class AgentRunner:
                     name=call["name"],
                 )
             )
+        comparison_args = state.get("comparison_args")
+        if not comparison_args and outputs and outputs[-1]["name"] == "search_products":
+            comparison_args = comparison_request(
+                state["quote_question"],
+                {"products": [p["product_id"] for p in outputs[-1]["result"].get("products", [])]},
+            )
         return {
             "messages": messages,
             "outputs": outputs,
             "traces": traces,
             "rounds": state["rounds"] + 1,
+            "comparison_args": comparison_args,
         }
 
     def run(
@@ -255,7 +272,10 @@ class AgentRunner:
                 "rounds": 0,
                 "model_calls": 0,
                 "public_source_ids": [],
-                "comparison_args": comparison_request(question, context),
+                "comparison_args": comparison_request(
+                    comparison_question(question, history), context
+                ),
+                "quote_question": comparison_question(question, history),
                 "execution_path": "agent",
             },
             config=graph_config,

@@ -126,3 +126,12 @@
 - Prioridade de entrega solicitada pelo usuário: PDF único de README/documentação
   gerado em entrega/README_Documentacao_Artefact.pdf e repositório público criado na
   conta GitHub autenticada, preservando .env e dados locais fora do Git.
+
+- Novos prints: pedido direto de seis folk e continuação faça de todos cobertos pelo
+  lote, sem doze chamadas individuais. Quantidade de parcelas anterior preservada.
+- Validação final:249 testes,23 regressões de comparação e12/12 cenários HTTP.
+  API real:seis modelos em2.240,06ms com uma geração; continuação em27,32ms sem geração.
+  Chrome:quatro modelos em26,19ms, negrito/fontes/reload/mobile aprovados.
+  Cinco sessões e32 mensagens existentes preservadas por digest.
+- Primeira CI pública aprovada em Python3.11,Python3.12 eDocker. PDF e código acessíveis
+  sem autenticação no GitHub; documentação final atualizada para a entrega.

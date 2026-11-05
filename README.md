@@ -110,6 +110,8 @@ pix e parcelado dos folk”, também usam uma rota local: recalculam todos os mo
 grupo nas duas formas e apresentam o resultado completo. Sem número de parcelas,
 3x aparece explicitamente como exemplo. Cidade, quantidade ou outros pedidos na mesma
 mensagem seguem pelo agente; a rota simples calcula uma unidade por modelo, sem frete.
+Um pedido direto de simulação pode buscar o grupo e cotar os resultados em lote.
+“Faça de todos” recupera as formas de pagamento e as parcelas do pedido anterior.
 
 | Variável | Padrão | Finalidade |
 | --- | --- | --- |
@@ -245,7 +247,9 @@ dela o mesmo token pode consultar aquele pedido. A resposta do chat traz `messag
 e o tempo de resposta em ms/segundos. O histórico preserva `latency_ms`; mensagens antigas
 sem medição retornam `null` e não exibem um tempo estimado.
 `execution_path=policy_faq` indica a resposta pública sem geração (`model_calls=0`);
-`quote_comparison` indica a comparação simples formatada pelo backend, sem gerações.
+`quote_comparison` indica a comparação simples formatada pelo backend. Uma seleção já
+conhecida dispensa geração; a primeira busca pode usar o modelo. `model_calls` informa
+a contagem real do turno.
 `agent` indica o ciclo habitual.
 `model` informa o modelo configurado, mesmo quando
 nenhuma geração foi necessária. Esses dois campos de execução são do turno, sem

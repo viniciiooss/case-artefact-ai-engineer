@@ -72,6 +72,12 @@ assuntos. O guard exige nomes completos e valores de todos os resultados válido
 lote, com uma única tentativa de correção em caso de omissão. Várias cotações preservam
 todos os IDs, em vez de só o último.
 
+Se o pedido direto de comparação ainda não tiver seleção, o resultado de search_products
+alimenta uma cotação em lote, respeitando o limite de rodadas. Assim, seis modelos não
+exigem doze chamadas individuais na mesma rodada. A continuação explícita “faça de todos”
+recupera somente a intenção de pagamento do último pedido compatível no histórico; preços
+e estoque são consultados novamente. Uma quantidade de parcelas anterior continua explícita.
+
 O ciclo segue o [quickstart do LangGraph](https://docs.langchain.com/oss/python/langgraph/quickstart).
 O contrato de ação se apoia em [function calling](https://developers.openai.com/api/docs/guides/function-calling)
 e na [integração ChatOllama](https://docs.langchain.com/oss/python/integrations/chat/ollama).

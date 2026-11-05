@@ -122,6 +122,7 @@ def test_model_requested_batch_preserves_the_normal_agent_cycle(tmp_path):
 def test_batch_keeps_promotion_rules_and_does_not_turn_savings_into_a_price(tmp_path):
     from datetime import date
 
+    from emporio.comparisons import comparison_reply
     from emporio.grounding import supported_answer
     from emporio.tools import make_tools
 
@@ -137,6 +138,7 @@ def test_batch_keeps_promotion_rules_and_does_not_turn_savings_into_a_price(tmp_
     pix, credit = result["quotes"]
     assert pix["total_cents"] == credit["total_cents"] == 32310
     assert pix["discount_percent"] == 10 and not pix["pix_applied"]
+    assert "10% de desconto em promoção ativa" in comparison_reply(result)
     outputs = [{"result": result}]
     name = "Kalani KAL-700T Tenor Natural"
     assert supported_answer(
@@ -298,6 +300,64 @@ def test_empty_filtered_selection_asks_for_a_model_instead_of_inventing_a_quote(
     result = svc.chat(sid, "Simule no PIX e parcelado dos folk")
     assert "Não encontrei" in result["message"]
     assert not money_mentions(result["message"])
+
+
+def test_fresh_plural_simulation_uses_one_batch_instead_of_twelve_tool_calls(tmp_path):
+    from langchain_core.messages import AIMessage
+
+    class SearchModel(NoModel):
+        calls = 0
+
+        def invoke(self, messages):
+            self.calls += 1
+            assert self.calls == 1
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "search_products",
+                        "args": {"query": "folk", "category": "Violões", "limit": 6},
+                        "id": "folk-selection",
+                    }
+                ],
+            )
+
+    svc, _ = seeded_service(tmp_path, SearchModel())
+    sid = svc.create_session()["session_id"]
+    result = svc.chat(sid, "simule o preco pix/parcelado dos violoes folk")
+    assert result["model_calls"] == 1
+    assert [t["name"] for t in result["tools"]] == ["search_products", "quote_products"]
+    assert len(result["context"]["products"]) == 6
+    for name in (
+        "Shelby SN-100 Folk Aço Preto",
+        "Giannini GF-1R Aço Folk Sunburst",
+        "Yamaha F310 Aço Natural",
+        "Tagima Dallas Tuner Aço Natural",
+        "Tagima Vegas Elétrico Aço Natural",
+        "Crafter HT-100 Folk Aço Natural",
+    ):
+        assert name in result["message"]
+    assert "limite de consultas" not in result["message"]
+
+
+@pytest.mark.parametrize("previous_count", ["", " em 6x"])
+def test_do_all_followup_reuses_requested_payment_modes_and_installments(tmp_path, previous_count):
+    svc, sid = seeded_service(tmp_path)
+    svc.sessions.save_turn(
+        sid,
+        f"simule o preco pix/parcelado{previous_count} dos violoes folk",
+        {"message": "Os quatro folk estão listados; qual você quer simular?"},
+        {"products": FOLK},
+    )
+    result = svc.chat(sid, "faça de todos")
+    assert result["model_calls"] == 0
+    assert result["context"]["products"] == FOLK
+    assert {52155, 55091, 66491, 71155} <= money_mentions(result["message"])
+    if previous_count:
+        assert "6x sem juros" in result["message"]
+        assert "exemplo" not in result["message"]
+    else:
+        assert "3x como exemplo" in result["message"]
 
 
 @pytest.mark.parametrize(

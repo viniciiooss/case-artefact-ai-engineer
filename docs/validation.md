@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **246 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden, FAQ e comparações completas |
+| Suíte pytest completa | **249 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden, FAQ e comparações completas |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -83,7 +83,8 @@ testes automatizados, que usam chaves fictícias e transporte controlado. Essa a
 não estima a qualidade geral de linguagem livre,
 resistência universal a prompt injection, adequação jurídica das políticas ou segurança de
 produção. A defesa de resposta é conservadora e heurística; não substitui avaliação real.
-O workflow GitHub Actions foi preparado, mas não executado em um repositório remoto.
+O primeiro workflow remoto, no commit `49d2ca7`, passou em Python 3.11, Python 3.12 e
+Docker: [execução pública](https://github.com/viniciiooss/case-artefact-ai-engineer/actions/runs/41956314470).
 
 ## Atualização: reaproveitamento Yaitec/OpenRouter
 
@@ -436,3 +437,22 @@ e **1,0 privacidade/escopo** no relatório `var/deepeval-folk-complete-final.jso
 amostra direcionada, não uma aprovação dos 60 casos golden. Em sessão isolada com a
 seleção anterior já registrada, a comparação local levou **27,73 ms** e zero gerações;
 a medição não inclui o tempo do primeiro turno nem constitui garantia de latência.
+
+
+## Atualização: pedido direto e continuação para todos
+
+Os prints seguintes mostraram seis modelos e a continuação `faça de todos`, que
+podia exigir doze cotações individuais e exceder oito chamadas por rodada. O pedido
+direto agora pode buscar o grupo e alimentar uma única ferramenta em lote. A continuação
+recupera somente PIX/crédito e as parcelas do pedido anterior, sem reaproveitar preços.
+
+As três novas regressões falharam antes da correção e passaram depois. O total é de
+**249 testes**, incluindo **23 de comparação**, além de **12/12 cenários HTTP**. Na API
+real, `simule o preco pix/parcelado dos violoes folk` apresentou os seis modelos nas duas
+formas em **2.240,06 ms**, com uma geração para buscar a seleção; `faça de todos` respondeu
+em **27,32 ms**, sem geração. Os resultados estão em `var/folk-all-live.json`.
+
+No Chrome, a comparação dos quatro folk foi exibida com negrito, fontes e tempo em
+**26,19 ms**. Recarregar preservou o histórico e o tempo; a viewport de 375 px não teve
+overflow nem erros JavaScript. Os testes criaram e excluíram somente suas próprias
+sessões; cinco conversas e 32 mensagens existentes foram preservadas por digest.

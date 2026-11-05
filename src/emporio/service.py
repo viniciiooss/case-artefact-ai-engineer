@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from emporio.agent import AgentRunner
 from emporio.catalog import Catalog
+from emporio.comparisons import comparison_question
 from emporio.config import Settings
 from emporio.observability import Observability
 from emporio.retrieval import PolicyIndex
@@ -172,7 +173,13 @@ class ChatService:
 
                 model = DemoModel(context, today)
             tools = make_tools(
-                self.catalog, self.policies, self.sessions, session_id, message, today
+                self.catalog,
+                self.policies,
+                self.sessions,
+                session_id,
+                message,
+                today,
+                quote_question=comparison_question(message, history),
             )
             try:
                 result = AgentRunner(model, tools, self.settings.max_tool_rounds).run(

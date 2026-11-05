@@ -9,7 +9,7 @@ from emporio.text import normalize
 REQUEST_WORDS = set(
     "faca fazer simule simular simulacao simulacoes quero gostaria pode poderia me por favor "
     "a o as os de do da dos das desses dessas destes destas todos todas modelos "
-    "produtos violao no na em e com tanto quanto pix cartao credito parcelado parcelada "
+    "produtos violao preco no na em e com tanto quanto pix cartao credito parcelado parcelada "
     "parcelados parceladas parcelamento parcela parcelas vezes folk nylon aco".split()
 )
 GROUPS = {"folk", "nylon", "aco"}
@@ -30,6 +30,22 @@ COUNTS = {
 INSTALLMENTS = re.compile(
     r"\b(\d{1,2})x\b|\b(\d{1,2}|" + "|".join(COUNTS) + r") (?:vezes|parcela)\b"
 )
+ALL_FOLLOWUPS = {"faca de todos", "faca todos", "simule todos", "de todos", "todos"}
+
+
+def comparison_question(question: str, history: list[dict]) -> str:
+    """Recupera só a intenção de pagamento de uma continuação explícita; nunca preços."""
+    if normalize(question) not in ALL_FOLLOWUPS:
+        return question
+    for entry in reversed(history):
+        if entry["role"] != "user" or normalize(entry["content"]) in ALL_FOLLOWUPS:
+            continue
+        previous = entry["content"]
+        text = normalize(previous)
+        if "pix" in text.split() and ("parcel" in text or installment_counts(previous)):
+            return previous
+        break
+    return question
 
 
 def installment_counts(question: str) -> list[int]:
@@ -98,7 +114,10 @@ def comparison_reply(payload: dict) -> str:
             blocks.append("\n".join(lines))
             continue
         lines.append(f"- Preço de tabela: **{brl(pix['original_unit_cents'])}**.")
-        discount = f" ({pix['discount_percent']}% de desconto)" if pix["discount_percent"] else ""
+        discount = ""
+        if pix["discount_percent"]:
+            label = "desconto PIX" if pix["pix_applied"] else "desconto em promoção ativa"
+            discount = f" ({pix['discount_percent']}% de {label})"
         lines.append(f"- PIX: **{brl(pix['total_cents'])}**{discount}.")
         n = payload["installments"]
         if credit["status"] != "ok":
