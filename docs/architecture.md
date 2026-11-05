@@ -13,6 +13,8 @@ flowchart TD
     Service --> Graph[LangGraph: roteamento conservador]
     Graph --> FAQ[Contato / horário / endereço: consulta + formatação]
     FAQ --> BM25
+    Graph --> Comparison[Comparação da seleção: lote + formatação completa]
+    Comparison --> Tools
     Graph --> Agent[Modelo → ferramentas → modelo]
     Provider[OpenAI / OpenRouter / Ollama / demo explícito] --> Graph
     Agent --> Tools[Ferramentas tipadas / autorização no servidor]
@@ -58,6 +60,18 @@ comprimento de mensagem, quantidade de resultados e tempo de uma chamada de LLM.
 chamada com nome desconhecido ou argumentos inválidos produz erro estruturado. Falha de
 provedor é tratada sem expor exceção ou segredo; não troca de provedor silenciosamente.
 
+Uma referência simples de PIX e parcelado a um grupo da seleção anterior tem um nó
+conservador de comparação. Os IDs da seleção são mantidos pelo servidor; a ferramenta
+em lote filtra apenas esses IDs por nome/descrição e reconsulta preços e estoque atuais.
+Calcula as duas formas para cada produto e formata todos os resultados em código,
+incluindo indisponibilidade e condições inválidas. Não há resumo generativo que possa
+omitir metade da lista. Na ausência de parcelas, mostra 3x como exemplo explícito.
+Quantidades, cidades, negações ou pedidos mistos ficam no agente. A mesma ferramenta
+pode ser escolhida pela LLM; nessa situação o ciclo continua para responder aos demais
+assuntos. O guard exige nomes completos e valores de todos os resultados válidos do
+lote, com uma única tentativa de correção em caso de omissão. Várias cotações preservam
+todos os IDs, em vez de só o último.
+
 O ciclo segue o [quickstart do LangGraph](https://docs.langchain.com/oss/python/langgraph/quickstart).
 O contrato de ação se apoia em [function calling](https://developers.openai.com/api/docs/guides/function-calling)
 e na [integração ChatOllama](https://docs.langchain.com/oss/python/integrations/chat/ollama).
@@ -72,6 +86,7 @@ o juiz de avaliação continua separado, com `max`. Veja as
 | --- | --- |
 | `search_products` / `get_product` | SQL parametrizado, busca/filtros limitados, status e estoque atuais do snapshot |
 | `quote_product` | Regras em Python, centavos inteiros, HALF_UP, maior promoção ativa, PIX sem acumular, parcelas e frete |
+| `quote_products` | Compara todos os IDs selecionados em PIX e crédito, uma unidade por modelo, sem frete; 3x como exemplo se não houver quantidade de parcelas |
 | `search_policies` | RAG lexical BM25 com normalização/expansão em português, trechos com seção e página do PDF |
 | `assess_return` | Canal e datas reais, condições e prazos; orientação condicional, sem autorizar reembolso |
 | `get_order` | Grant verificado dentro da ferramenta, vinculado à sessão e ao número do pedido |

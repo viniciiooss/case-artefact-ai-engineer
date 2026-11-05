@@ -111,6 +111,23 @@ def _without_search_budget_limits(answer: str, outputs: list[dict]) -> str:
 def supported_answer(answer: str, outputs: list[dict]) -> bool:
     checked_answer = _without_search_budget_limits(answer, outputs)
     payloads = [o["result"] for o in outputs if "error" not in o["result"]]
+    # Uma comparação em lote exige cobertura de cada modelo e dos valores calculados,
+    # mesmo quando a pergunta contém outros assuntos e continua no ciclo generativo.
+    stated_money = money_mentions(answer)
+    for payload in payloads:
+        if (
+            payload.get("quotes")
+            and payload.get("installments_example")
+            and "exemplo" not in normalize(answer).split()
+        ):
+            return False
+        for item in payload.get("quotes", []):
+            if normalize(item["name"]) not in normalize(answer):
+                return False
+            if item["status"] == "ok":
+                expected = {item["total_cents"], *item["installment_cents"]}
+                if not expected <= stated_money:
+                    return False
     known_money = _cents_fields(payloads)
     for payload in payloads:
         for source in payload.get("sources", []):
@@ -120,14 +137,21 @@ def supported_answer(answer: str, outputs: list[dict]) -> bool:
         return False
     commercial_money, discount_money = set(), set()
     for payload in payloads:
-        for key in ("product", "products", "quote"):
+        for key in ("product", "products", "quote", "quotes"):
             data = payload.get(key, {})
-            if key == "quote":
+            if key in {"quote", "quotes"}:
+                quotes = data if isinstance(data, list) else [data]
                 # Economia é evidência para o desconto, não para o preço do instrumento.
-                discount_money.update(
-                    _cents_fields({k: v for k, v in data.items() if k.endswith("discount_cents")})
-                )
-                data = {k: v for k, v in data.items() if not k.endswith("discount_cents")}
+                for item in quotes:
+                    discount_money.update(
+                        _cents_fields(
+                            {k: v for k, v in item.items() if k.endswith("discount_cents")}
+                        )
+                    )
+                data = [
+                    {k: v for k, v in item.items() if not k.endswith("discount_cents")}
+                    for item in quotes
+                ]
             commercial_money.update(_cents_fields(data))
     # R$ 35 de frete não sustenta a afirmação de que um instrumento custa R$ 35.
     for sentence in re.split(r"(?<=[.!?])\s+|\n+", checked_answer):
@@ -162,7 +186,7 @@ def supported_answer(answer: str, outputs: list[dict]) -> bool:
 
     products = [p for data in payloads for p in data.get("products", [])]
     products.extend(data["product"] for data in payloads if "product" in data)
-    has_catalog = bool(products) or any("quote" in data for data in payloads)
+    has_catalog = bool(products) or any("quote" in data or data.get("quotes") for data in payloads)
     text = normalize(answer)
     stock_claim = re.search(
         r"\b(?:esta|estao|tem|temos|ha)\s+(?:\d+\s+)?(?:em\s+)?"

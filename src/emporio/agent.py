@@ -10,6 +10,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from pydantic import ValidationError
 
+from emporio.comparisons import comparison_reply, comparison_request
 from emporio.grounding import supported_answer
 from emporio.presentation import customer_answer
 from emporio.prompts import SYSTEM_PROMPT
@@ -38,6 +39,8 @@ class AgentState(TypedDict):
     rounds: int
     model_calls: int
     public_source_ids: list[str]
+    comparison_args: dict | None
+    execution_path: str
 
 
 class AgentRunner:
@@ -50,8 +53,12 @@ class AgentRunner:
         graph.add_node("tools", self._tools)
         graph.add_node("limit", self._limit)
         graph.add_node("public_info", self._public_info)
+        graph.add_node("quote_request", self._quote_request)
+        graph.add_node("format_quotes", self._format_quotes)
         graph.add_conditional_edges(
-            START, self._entry, {"model": "model", "public_info": "public_info"}
+            START,
+            self._entry,
+            {"model": "model", "public_info": "public_info", "quote_request": "quote_request"},
         )
         graph.add_conditional_edges(
             "public_info", self._after_public_info, {"model": "model", "done": END}
@@ -59,7 +66,11 @@ class AgentRunner:
         graph.add_conditional_edges(
             "model", self._next, {"tools": "tools", "done": END, "limit": "limit"}
         )
-        graph.add_edge("tools", "model")
+        graph.add_edge("quote_request", "tools")
+        graph.add_conditional_edges(
+            "tools", self._after_tools, {"model": "model", "format_quotes": "format_quotes"}
+        )
+        graph.add_edge("format_quotes", END)
         graph.add_edge("limit", END)
         self.graph = graph.compile()
 
@@ -75,6 +86,8 @@ class AgentRunner:
         }
 
     def _entry(self, state: AgentState) -> str:
+        if state.get("comparison_args") and "quote_products" in self.tools:
+            return "quote_request"
         last = state["messages"][-1]
         if (
             isinstance(last, HumanMessage)
@@ -83,6 +96,40 @@ class AgentRunner:
         ):
             return "public_info"
         return "model"
+
+    def _quote_request(self, state: AgentState) -> dict:
+        return {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "quote_products",
+                            "args": state["comparison_args"],
+                            "id": uuid4().hex,
+                        }
+                    ],
+                )
+            ]
+        }
+
+    def _after_tools(self, state: AgentState) -> str:
+        call = next(m for m in reversed(state["messages"]) if isinstance(m, AIMessage))
+        last = state["outputs"][-1]
+        if (
+            state.get("comparison_args")
+            and len(call.tool_calls) == 1
+            and last["name"] == "quote_products"
+            and "quotes" in last["result"]
+        ):
+            return "format_quotes"
+        return "model"
+
+    def _format_quotes(self, state: AgentState) -> dict:
+        return {
+            "messages": [AIMessage(content=comparison_reply(state["outputs"][-1]["result"]))],
+            "execution_path": "quote_comparison",
+        }
 
     def _public_info(self, state: AgentState) -> dict:
         intent = public_intent(state["messages"][-1].text)
@@ -208,6 +255,8 @@ class AgentRunner:
                 "rounds": 0,
                 "model_calls": 0,
                 "public_source_ids": [],
+                "comparison_args": comparison_request(question, context),
+                "execution_path": "agent",
             },
             config=graph_config,
         )
@@ -228,7 +277,9 @@ class AgentRunner:
                                 "o assunto e usando evidências das ferramentas deste turno. "
                                 "Preços de catálogo podem vir de search_products/get_product. "
                                 "Para calcular PIX, parcelas, quantidades ou frete, use "
-                                "quote_product. Não substitua uma lista solicitada por uma "
+                                "quote_product/quote_products. Nas comparações em lote, "
+                                "inclua o nome completo e as duas formas de pagamento "
+                                "de cada modelo, sem omissões. Não substitua uma lista por uma "
                                 "cotação de um só produto. Se faltar informação, pergunte. "
                                 "Esta verificação é interna: não mencione revisão, rascunhos "
                                 "ou respostas anteriores que o cliente não recebeu."
@@ -240,6 +291,7 @@ class AgentRunner:
             )
         sources = {}
         new_context = context.copy()
+        quoted_ids = []
         for output in state["outputs"]:
             payload = output["result"]
             if "error" in payload:
@@ -251,12 +303,15 @@ class AgentRunner:
             elif "product" in payload:
                 new_context["products"] = [payload["product"]["product_id"]]
             elif "quote" in payload:
-                new_context["products"] = [payload["quote"]["product_id"]]
+                quoted_ids.append(payload["quote"]["product_id"])
+            quoted_ids.extend(q["product_id"] for q in payload.get("quotes", []))
             if "assessment" in payload:
                 new_context["return_request"] = output["args"]
                 new_context["pending_return"] = (
                     payload["assessment"]["status"] == "needs_information"
                 )
+        if quoted_ids:
+            new_context["products"] = list(dict.fromkeys(quoted_ids))
         answer = state["messages"][-1].text
         if not supported_answer(answer, state["outputs"]):
             answer = (
@@ -272,6 +327,8 @@ class AgentRunner:
             ),
             "tools": state["traces"],
             "context": new_context,
-            "execution_path": "policy_faq" if state["public_source_ids"] else "agent",
+            "execution_path": "policy_faq"
+            if state["public_source_ids"]
+            else state["execution_path"],
             "model_calls": state["model_calls"],
         }

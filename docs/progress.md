@@ -114,3 +114,15 @@
 - Wheel final reinstalado e servidor atualizado. Chrome/API real listaram dez violões
   com nomes/preços/fontes em 5,2 s e duas gerações, sem cotação indevida ou referência
   a lista anterior. Reload/mobile aprovados; quatro conversas e 16 mensagens preservadas.
+
+- Comparação de folk corrigida: lote reconsulta toda a seleção, calcula PIX/crédito e
+  formata o grupo completo sem geração para perguntas simples. Sem parcelas, 3x é
+  exemplo explícito; pedidos mistos continuam no agente com guard de completude.
+- Contexto preserva todos os produtos cotados. Regressões incluem parcelas inválidas,
+  estoque atualizado, centavos do Dallas, promoção, omissões, assuntos mistos e Bass 2X.
+- Validação: 246 testes, 12/12 cenários HTTP, Ruff e revisão independente aprovados.
+  Caso real Haiku/Luna aprovado com 1,0 comercial e 1,0 privacidade/escopo; não houve
+  execução dos 60 casos golden. Comparação isolada observada em 27,73 ms, zero gerações.
+- Prioridade de entrega solicitada pelo usuário: PDF único de README/documentação
+  gerado em entrega/README_Documentacao_Artefact.pdf e repositório público criado na
+  conta GitHub autenticada, preservando .env e dados locais fora do Git.

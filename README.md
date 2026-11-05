@@ -5,6 +5,8 @@ Mel tem uma voz acolhedora, informal e profissional. Consulta instrumentos, esto
 preços, promoções, pedidos identificados e o manual da loja. Inclui chat web, CLI, API
 HTTP, persistência local, testes e conversas reproduzíveis.
 
+Documentação reunida para a entrega: [README e documentação em PDF](entrega/README_Documentacao_Artefact.pdf).
+
 ![Chat web da Empório da Música](docs/assets/welcome.png)
 
 **O modo padrão `demo` é um simulador determinístico, não uma LLM.** Ele percorre o mesmo
@@ -102,6 +104,12 @@ LangGraph: consultam as políticas do turno e formatam os fatos sem chamadas à 
 Perguntas mistas ou sem informação suficiente seguem para o agente. No OpenRouter, o
 atendimento usa `reasoning.effort=none` por padrão; o juiz mantém `max`. A
 [análise de latência](docs/latency.md) registra medições, limites e a decisão sobre Laya/Jev.
+
+Comparações simples de PIX e parcelado da seleção anterior, como “faça a simulacao no
+pix e parcelado dos folk”, também usam uma rota local: recalculam todos os modelos do
+grupo nas duas formas e apresentam o resultado completo. Sem número de parcelas,
+3x aparece explicitamente como exemplo. Cidade, quantidade ou outros pedidos na mesma
+mensagem seguem pelo agente; a rota simples calcula uma unidade por modelo, sem frete.
 
 | Variável | Padrão | Finalidade |
 | --- | --- | --- |
@@ -237,7 +245,9 @@ dela o mesmo token pode consultar aquele pedido. A resposta do chat traz `messag
 e o tempo de resposta em ms/segundos. O histórico preserva `latency_ms`; mensagens antigas
 sem medição retornam `null` e não exibem um tempo estimado.
 `execution_path=policy_faq` indica a resposta pública sem geração (`model_calls=0`);
-`agent` indica o ciclo habitual. `model` informa o modelo configurado, mesmo quando
+`quote_comparison` indica a comparação simples formatada pelo backend, sem gerações.
+`agent` indica o ciclo habitual.
+`model` informa o modelo configurado, mesmo quando
 nenhuma geração foi necessária. Esses dois campos de execução são do turno, sem
 migração adicional do histórico.
 

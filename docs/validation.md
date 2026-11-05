@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **226 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden e rota de FAQ |
+| Suíte pytest completa | **246 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval, dataset golden, FAQ e comparações completas |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -408,3 +408,31 @@ O sandbox do macOS bloqueou configuração de rede, Git, porta local e acesso ao
 as operações necessárias foram autorizadas no ambiente de execução. A instalação editável
 recebeu atributo macOS `UF_HIDDEN` no `.pth`, que fez o Python ignorá-lo. A instalação por
 wheel (`--no-editable`), utilizada nos comandos de entrega e Docker, evitou essa dependência.
+
+
+## Atualização: comparação completa de PIX e parcelado
+
+O pedido exato `faça a simulacao no pix e parcelado dos folk` reproduziu uma resposta
+que calculava o PIX dos quatro modelos, mas tentava 10x e depois 7x sem concluir três
+opções de crédito. O guard verificava os valores, sem exigir cobertura do grupo; várias
+cotações ainda sobrescreviam o contexto, deixando somente o último produto.
+
+A ferramenta em lote `quote_products` reconsulta todos os IDs da seleção e calcula PIX
+e crédito para cada modelo. Referências simples a um grupo usam um nó conservador com
+formatação completa, sem geração. Sem parcelas definidas pelo cliente, o backend usa
+3x como exemplo explícito; números sugeridos pelo modelo não mudam essa escolha. Em
+pedidos mistos, o agente continua para consultar os outros assuntos; o guard exige nomes
+e valores do lote e o rótulo de exemplo quando aplicável. Nomes como Ibanez Bass 2X não
+são tratados como quantidade de parcelas em pedidos mistos.
+
+A suíte completa passou com **246 testes**, incluindo **20 regressões de comparação**,
+com os CSVs, grafo e ferramentas reais. As **12 regressões HTTP** passaram; Ruff e
+formatação também foram conferidos. A revisão independente não encontrou bloqueadores
+após as correções. O teste do Tagima Dallas de R$ 749,00 preserva duas parcelas de
+R$ 249,67 e uma de R$ 249,66, sem arredondar o total para um valor incorreto.
+
+Um caso real de dois turnos, com Haiku 5.5 e juiz GPT-6 Luna, passou com **1,0 comercial**
+e **1,0 privacidade/escopo** no relatório `var/deepeval-folk-complete-final.json`. É uma
+amostra direcionada, não uma aprovação dos 60 casos golden. Em sessão isolada com a
+seleção anterior já registrada, a comparação local levou **27,73 ms** e zero gerações;
+a medição não inclui o tempo do primeiro turno nem constitui garantia de latência.

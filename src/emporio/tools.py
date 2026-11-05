@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from langchain_core.tools import tool
 from pydantic import Field
 
+from emporio.comparisons import installment_counts
 from emporio.pricing import assess_return as evaluate_return
 from emporio.pricing import quote
 from emporio.text import normalize
@@ -75,6 +76,57 @@ def make_tools(catalog, policies, sessions, session_id: str, question: str, toda
         return {
             "quote": result,
             "sources": [product_source(product)] + policies.section_sources(*sections),
+        }
+
+    @tool
+    def quote_products(
+        product_ids: Annotated[
+            list[Annotated[int, Field(ge=1)]], Field(min_length=1, max_length=10)
+        ],
+        query: Annotated[str, Field(max_length=80)] = "",
+        installments: Annotated[int | None, Field(ge=2, le=12)] = None,
+    ) -> dict:
+        """Compara PIX e cartão de TODOS os produtos da seleção, sem frete, uma unidade por modelo.
+
+        Passe todos os IDs da seleção anterior; query filtra só essa seleção (ex.: folk).
+        Sem quantidade de parcelas definida, use installments=None: mostra 3x como exemplo.
+        Não escolhe um subconjunto nem tenta números de parcelas não solicitados.
+        """
+        requested = installment_counts(question)
+        if not requested:
+            installments = None  # O exemplo padrão é decisão do backend, não do modelo.
+        elif installments is None and len(requested) == 1:
+            installments = requested[0]
+        if requested and (installments not in requested or not 2 <= installments <= 12):
+            return {"error": "installments_not_requested", "sources": []}
+        products = [catalog.get_product(i) for i in dict.fromkeys(product_ids)]
+        if any(p is None for p in products):
+            return {"error": "selection_changed", "sources": []}
+        words = normalize(query).split()
+        products = [
+            p
+            for p in products
+            if all(w in normalize(p["name"] + " " + p["description"]).split() for w in words)
+        ]
+        quotes = [
+            {
+                **quote(
+                    p,
+                    payment=payment,
+                    installments=(installments or 3) if payment == "credit" else 1,
+                ),
+                "name": p["name"],
+                "payment": payment,
+            }
+            for p in products
+            for payment in ("pix", "credit")
+        ]
+        return {
+            "quotes": quotes,
+            "installments": installments or 3,
+            "installments_example": installments is None,
+            "sources": [product_source(p) for p in products]
+            + policies.section_sources("3", "3.1", "6.2"),
         }
 
     @tool
@@ -156,6 +208,7 @@ def make_tools(catalog, policies, sessions, session_id: str, question: str, toda
         search_products,
         get_product,
         quote_product,
+        quote_products,
         get_order,
         search_policies,
         assess_return,
