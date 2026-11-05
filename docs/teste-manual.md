@@ -37,6 +37,12 @@ para testar a memória. A redação da Mel pode variar; confira os fatos e as fo
 O destaque deve aparecer em **negrito**, sem asteriscos visíveis. Recarregue a página e
 confira a formatação também no histórico. As mensagens do cliente permanecem como digitadas.
 
+Nas novas respostas, confira **Tempo de resposta** abaixo do texto, em milissegundos ou
+segundos. É o tempo medido no servidor, incluindo consultas e geração da resposta; ele
+deve permanecer igual após recarregar. Mensagens anteriores a essa medição não exibem
+um tempo inventado. Cabeçalho, respostas, fontes e campo de envio seguem a mesma coluna;
+listas devem manter o recuo também quando uma linha quebra no celular.
+
 Abra os itens de **Fontes desta resposta**. As políticas devem apontar para a página do PDF;
 preços, estoque e pedidos devem trazer a fonte correspondente do snapshot.
 

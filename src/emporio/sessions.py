@@ -35,7 +35,7 @@ class SessionStore:
              session_id TEXT NOT NULL REFERENCES sessions ON DELETE CASCADE,
              role TEXT NOT NULL CHECK(role IN ('user','assistant')),
              content TEXT NOT NULL, sources TEXT NOT NULL DEFAULT '[]',
-             created_at REAL NOT NULL);
+             created_at REAL NOT NULL, latency_ms REAL CHECK(latency_ms >= 0));
             CREATE TABLE IF NOT EXISTS order_grants (
              session_id TEXT NOT NULL REFERENCES sessions ON DELETE CASCADE,
              order_id INTEGER NOT NULL, PRIMARY KEY(session_id, order_id));
@@ -48,6 +48,13 @@ class SessionStore:
              created_at REAL NOT NULL);
             CREATE INDEX IF NOT EXISTS ix_messages_session ON messages(session_id, message_id);
             """)
+            # Migração aditiva: respostas antigas continuam com tempo desconhecido (NULL).
+            conn.execute("BEGIN IMMEDIATE")
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(messages)")}
+            if "latency_ms" not in columns:
+                conn.execute(
+                    "ALTER TABLE messages ADD COLUMN latency_ms REAL CHECK(latency_ms >= 0)"
+                )
 
     def create(self) -> dict:
         session_id, token = str(uuid4()), secrets.token_urlsafe(32)
@@ -69,11 +76,15 @@ class SessionStore:
             raise SessionNotFound("Sessão não encontrada ou credencial inválida.")
 
     def history(self, session_id: str, limit: int | None = None) -> list[dict]:
-        sql = "SELECT role,content,sources FROM messages WHERE session_id=? ORDER BY message_id"
+        sql = (
+            "SELECT role,content,sources,latency_ms FROM messages "
+            "WHERE session_id=? ORDER BY message_id"
+        )
         params = [session_id]
         if limit:
             sql = (
-                "SELECT role,content,sources FROM (SELECT message_id,role,content,sources "
+                "SELECT role,content,sources,latency_ms "
+                "FROM (SELECT message_id,role,content,sources,latency_ms "
                 "FROM messages WHERE session_id=? ORDER BY message_id DESC LIMIT ?) "
                 "ORDER BY message_id"
             )
@@ -98,16 +109,17 @@ class SessionStore:
             ).fetchone():
                 raise SessionNotFound("A sessão foi excluída durante a consulta.")
             conn.executemany(
-                "INSERT INTO messages(session_id,role,content,sources,created_at)"
-                " VALUES (?,?,?,?,?)",
+                "INSERT INTO messages(session_id,role,content,sources,created_at,latency_ms)"
+                " VALUES (?,?,?,?,?,?)",
                 [
-                    (session_id, "user", question, "[]", time.time()),
+                    (session_id, "user", question, "[]", time.time(), None),
                     (
                         session_id,
                         "assistant",
                         response["message"],
                         json.dumps(response.get("sources", []), ensure_ascii=False),
                         time.time(),
+                        response.get("latency_ms"),
                     ),
                 ],
             )

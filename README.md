@@ -222,7 +222,9 @@ curl -X POST http://127.0.0.1:8000/api/sessions/SESSION_ID/order-access \
 
 O segundo comando exemplifica identificação explícita com e-mail fictício. Só depois
 dela o mesmo token pode consultar aquele pedido. A resposta do chat traz `message`,
-`sources`, `tools`, `provider`, `model`, `latency_ms` e `context`; a UI apresenta as fontes.
+`sources`, `tools`, `provider`, `model`, `latency_ms` e `context`; a UI apresenta as fontes
+e o tempo de resposta em ms/segundos. O histórico preserva `latency_ms`; mensagens antigas
+sem medição retornam `null` e não exibem um tempo estimado.
 
 | Método e rota | Uso |
 | --- | --- |

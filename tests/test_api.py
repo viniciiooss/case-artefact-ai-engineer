@@ -76,6 +76,8 @@ def test_chat_history_and_delete(client):
     history = client.get(f"/api/sessions/{sid}", headers=headers).json()["messages"]
     assert [m["role"] for m in history] == ["user", "assistant"]
     assert history[0]["content"] == "Qual o horário de funcionamento?"
+    assert response.json()["latency_ms"] >= 0
+    assert history[1].get("latency_ms") == response.json()["latency_ms"]
     assert client.get(f"/api/sessions/{sid}/history", headers=headers).json() == history
     assert client.delete(f"/api/sessions/{sid}", headers=headers).status_code == 204
     assert client.get(f"/api/sessions/{sid}", headers=headers).status_code == 404

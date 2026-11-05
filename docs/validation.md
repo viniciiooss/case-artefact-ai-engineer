@@ -8,7 +8,7 @@ Os dados utilizados são o snapshot do ZIP fornecido, sem modificar o conteúdo 
 
 | Verificação | Resultado observado |
 | --- | --- |
-| Suíte pytest completa | **165 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval e dataset golden |
+| Suíte pytest completa | **167 testes passaram**, incluindo OpenRouter, Langfuse, DeepEval e dataset golden |
 | Ruff check | Sem erros |
 | Ruff format --check | Nenhuma alteração de formatação necessária |
 | Avaliação HTTP em processo | **12 de 12 cenários aprovados**, serviço e SQLite reais |
@@ -260,6 +260,35 @@ apagada. Evidências locais: `var/chat-formatting-live.json` e capturas
 `var/chat-formatting-live-desktop.png` / `var/chat-formatting-live-mobile.png`.
 O juiz não foi chamado nesse reteste; não há novas notas atribuídas ao banco ampliado.
 O pacote wheel foi reinstalado e o servidor local atualizado na porta 8000.
+
+## Atualização: latência e alinhamento do chat
+
+As novas respostas mostram **Tempo de resposta** abaixo do texto, em ms ou segundos
+com formatação brasileira. O valor é o `latency_ms` medido pelo serviço, incluindo
+consultas e geração, sem o transporte de rede. A latência agora persiste no SQLite e
+é devolvida no histórico completo/limitado. A migração adiciona uma coluna nullable,
+preserva conversas existentes e não estima tempos de mensagens antigas.
+
+Cabeçalho, mensagens, fontes e campo de envio compartilham uma coluna de até 820 px,
+com margens responsivas. Parágrafos e listas usam elementos DOM seguros, com recuo e
+espaçamento consistentes; negrito e proteção contra HTML permanecem ativos.
+
+Validação: **167 testes**, **12/12 cenários HTTP**, Ruff e regressão de navegador
+aprovados. Os testes cobrem migração do banco anterior, reabertura, histórico limitado,
+latência retornada pela API e exibição em ms/segundos. O Chrome verificou alinhamento
+horizontal e centralização do cabeçalho em 1440, 1024, 768, 760, 375 e 320 px, além de
+fontes abertas, texto malicioso, listas e tempos ausentes/inválidos.
+
+Uma sessão com a API HTTP real em modo demonstração confirmou que os tempos persistem
+e continuam iguais após recarregar. Evidências locais: `var/chat-latency-preview.json`,
+`var/chat-latency-desktop.png` e `var/chat-latency-mobile.png`. As verificações desta
+alteração não chamaram modelos pagos. A revisão independente não encontrou falha
+crítica/importante; o desvio de 6 px na centralização vertical foi reproduzido e
+corrigido, com regressão no navegador.
+
+Wheel reinstalado e servidor principal atualizado em `http://127.0.0.1:8000`, mantendo
+MiMo-V2.6-Pro via OpenRouter. A migração local preservou as quatro sessões e 12 mensagens
+existentes; os assets servidos foram conferidos contra os arquivos verificados.
 
 ## Ambiente desta sessão
 

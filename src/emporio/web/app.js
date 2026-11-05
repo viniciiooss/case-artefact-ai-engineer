@@ -142,15 +142,55 @@
       label.textContent = "Mel";
       article.append(label);
     }
-    const content = document.createElement("p");
+    const content = document.createElement("div");
     content.className = "message-content";
     const text = String(message.content || "");
     messageText.set(article, text);
-    if (message.role === "assistant") renderEmphasis(text, content);
+    if (message.role === "assistant") renderAnswer(text, content);
     else content.textContent = text;
     article.append(content);
-    if (message.role === "assistant") renderSources(message.sources, article);
+    if (message.role === "assistant") {
+      const ms = message.latency_ms;
+      if (typeof ms === "number" && Number.isFinite(ms) && ms >= 0) {
+        const latency = document.createElement("p");
+        latency.className = "message-latency";
+        const value = ms < 1000 ? Math.round(ms) : ms / 1000;
+        const formatted = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value);
+        latency.textContent = `Tempo de resposta: ${formatted} ${ms < 1000 ? "ms" : "s"}`;
+        latency.title = "Tempo de processamento no servidor, incluindo consultas às fontes.";
+        article.append(latency);
+      }
+      renderSources(message.sources, article);
+    }
     $("messages").append(article);
+  }
+
+  function renderAnswer(text, parent) {
+    let paragraph = null;
+    let list = null;
+    for (const line of text.split(/\r?\n/)) {
+      if (!line.trim()) { paragraph = null; list = null; continue; }
+      const item = line.match(/^\s*(?:([-*•])|(\d+)[.)])\s+(.+)$/);
+      if (item) {
+        const tag = item[1] ? "ul" : "ol";
+        if (!list || list.localName !== tag) {
+          list = document.createElement(tag);
+          if (tag === "ol") list.start = Number(item[2]);
+          parent.append(list);
+        }
+        const entry = document.createElement("li");
+        renderEmphasis(item[3], entry);
+        list.append(entry);
+        paragraph = null;
+      } else {
+        list = null;
+        if (!paragraph) {
+          paragraph = document.createElement("p");
+          parent.append(paragraph);
+        } else paragraph.append(document.createElement("br"));
+        renderEmphasis(line, paragraph);
+      }
+    }
   }
 
   function renderEmphasis(text, parent) {
@@ -259,7 +299,7 @@
     try {
       const result = await request(sessionPath("/messages"), { method: "POST", body: JSON.stringify({ message: text }) }, true);
       if (typeof result.message !== "string" || !result.message.trim()) throw new RequestError("A resposta não chegou completa. Sua mensagem está pronta para tentar novamente.", 0);
-      state.messages.push({ role: "assistant", content: result.message, sources: result.sources || [] });
+      state.messages.push({ role: "assistant", content: result.message, sources: result.sources || [], latency_ms: result.latency_ms });
       updateProvider(result.provider);
       renderHistory();
     } catch (error) {

@@ -27,8 +27,11 @@ def main():
         "reference": "politicas_da_loja.pdf",
     }
     reply = (
-        "Nosso **horário** é de **09h às 18h**.\n"
-        "*Sábados*: 09h às 13h.\n\n"
+        "Nosso **horário** é de **09h às 18h**.\n\n"
+        "- *Sábados*: 09h às 13h.\n"
+        "- Domingos e feriados: fechado.\n\n"
+        "3. Escolha seu instrumento.\n"
+        "4. Confira as condições.\n\n"
         '<img src=x onerror="window.replyInjected=true">'
         "<script>window.replyInjected=true</script>\n"
         "**<svg onload=window.replyInjected=true>**"
@@ -47,13 +50,26 @@ def main():
             route.fulfill(json={"messages": messages, "verified_orders": []})
         elif path == "/api/sessions/format-test/messages":
             question = route.request.post_data_json["message"]
+            latency = 2473.6 if not messages else 742
             messages.extend(
                 [
                     {"role": "user", "content": question, "sources": []},
-                    {"role": "assistant", "content": reply, "sources": [source]},
+                    {
+                        "role": "assistant",
+                        "content": reply,
+                        "sources": [source],
+                        "latency_ms": latency,
+                    },
                 ]
             )
-            route.fulfill(json={"message": reply, "sources": [source], "provider": "demo"})
+            route.fulfill(
+                json={
+                    "message": reply,
+                    "sources": [source],
+                    "provider": "demo",
+                    "latency_ms": latency,
+                }
+            )
         else:
             route.abort()
 
@@ -73,6 +89,10 @@ def main():
         expect(answer.locator("strong").first).to_have_text("horário")
         expect(answer.locator("em")).to_have_text("Sábados")
         assert "**horário**" not in answer.inner_text()
+        expect(answer.locator(".message-latency")).to_have_text("Tempo de resposta: 2,5 s")
+        expect(answer.locator(".message-content ul li")).to_have_count(2)
+        expect(answer.locator(".message-content ol li")).to_have_count(2)
+        expect(answer.locator(".message-content ol")).to_have_attribute("start", "3")
         expect(page.locator(".message-user .message-content").first).to_have_text(question)
         expect(page.locator(".message-user strong")).to_have_count(0)
         expect(page.locator(".message img, .message script, .message svg")).to_have_count(0)
@@ -89,18 +109,53 @@ def main():
         page.locator("#message").fill("E no sábado?")
         page.locator("#message").press("Enter")
         expect(page.locator(".message-assistant")).to_have_count(2)
+        expect(page.locator(".message-latency").last).to_have_text("Tempo de resposta: 742 ms")
         expect(answer).to_have_attribute("data-preserved", "yes")
         expect(source_details).to_have_attribute("open", "")
         page.reload()
         expect(page.locator(".message-assistant")).to_have_count(2)
         expect(page.locator(".message-assistant strong")).to_have_count(6)
-        page.set_viewport_size({"width": 375, "height": 812})
-        assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")
-        expect(page.locator("#message")).to_be_visible()
+        expect(page.locator(".message-latency").first).to_have_text("Tempo de resposta: 2,5 s")
+        for width in [1440, 1024, 768, 760, 375, 320]:
+            page.set_viewport_size({"width": width, "height": 812})
+            assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")
+            expect(page.locator("#message")).to_be_visible()
+            lefts = page.evaluate("""() => [
+                '.assistant-identity', '.message-assistant', '.composer'
+            ].map(selector => document.querySelector(selector).getBoundingClientRect().left)""")
+            assert max(lefts) - min(lefts) <= 1, (width, lefts)
+            centers = page.evaluate("""() => [
+                '.conversation-header', '.conversation-header-inner'
+            ].map(selector => {
+                const rect = document.querySelector(selector).getBoundingClientRect();
+                return rect.top + rect.height / 2;
+            })""")
+            assert abs(centers[0] - centers[1]) <= 1, (width, centers)
+        for latency in [None, "2473.6", -1, True, 0]:
+            messages.append(
+                {"role": "assistant", "content": "Histórico", "sources": [], "latency_ms": latency}
+            )
+        page.reload()
+        expect(page.locator(".message-assistant")).to_have_count(7)
+        expect(page.locator(".message-latency")).to_have_count(3)
+        expect(page.locator(".message-latency").last).to_have_text("Tempo de resposta: 0 ms")
         assert errors == [], errors
         browser.close()
     print(
-        json.dumps({"passed": True, "checks": ["emphasis", "XSS", "sources", "history", "mobile"]})
+        json.dumps(
+            {
+                "passed": True,
+                "checks": [
+                    "emphasis",
+                    "lists",
+                    "latency",
+                    "XSS",
+                    "sources",
+                    "history",
+                    "alignment",
+                ],
+            }
+        )
     )
 
 

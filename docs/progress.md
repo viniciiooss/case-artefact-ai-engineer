@@ -66,5 +66,13 @@
 - Devolução em dois turnos repetida com MiMo real: negrito visível, nenhuma citação interna
   no texto, fontes preservadas e histórico/mobile aprovados. Sem chamada ao juiz; sessão
   temporária excluída. Wheel reinstalado e servidor atualizado em http://127.0.0.1:8000.
+- Tempo de resposta adicionado sob o texto da Mel e persistido no histórico, com migração
+  aditiva que preserva mensagens antigas sem estimar latência. Cabeçalho, mensagens e campo
+  de envio alinhados na mesma coluna; parágrafos/listas com espaçamento e recuo consistentes.
+- Validação: 167 testes, Ruff, 12/12 cenários HTTP e Chrome em seis larguras de 320 a 1440 px.
+  API real em demo confirmou persistência após reload, sem chamadas a modelos pagos.
+  Revisão independente sem falhas críticas/importantes; centralização vertical corrigida.
+- Wheel reinstalado e servidor principal atualizado, com assets conferidos. A migração
+  preservou as quatro sessões e 12 mensagens existentes. Servidor temporário encerrado.
 - Ambiente macOS: uv exigiu acesso à configuração de rede fora do sandbox; instalação autorizada.
   Um atributo UF_HIDDEN no .pth da instalação editável bloqueou imports e foi removido localmente.
